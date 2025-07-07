@@ -141,7 +141,7 @@ public class Login extends JFrame {
                     "Welcome to " + selectedCompany + "!");
 
                 // Go to homepage
-                HomePage homePage = new HomePage(); // You can pass selectedCompany to it if needed
+             HomePage homePage = new HomePage(selectedCompany); // ✅ Correct
                 homePage.setVisible(true);
                 dispose();
             } else {

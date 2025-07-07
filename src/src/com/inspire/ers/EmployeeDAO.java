@@ -56,4 +56,49 @@ public class EmployeeDAO {
 
         return employees;
     }
+        
+        
+        public static List<Employee> fetchEmployeesByCompany(String company) {
+    List<Employee> employees = new ArrayList<>();
+
+    try (Connection conn = DBUtil.getConnection();
+         PreparedStatement stmt = conn.prepareStatement("SELECT * FROM employees WHERE is_removed = FALSE AND company = ?")) {
+
+        stmt.setString(1, company);
+        ResultSet rs = stmt.executeQuery();
+
+        while (rs.next()) {
+            Employee emp = new Employee();
+            emp.setId(rs.getInt("id"));
+            emp.setFirstName(rs.getString("first_name"));
+            emp.setLastName(rs.getString("last_name"));
+            emp.setMiddleName(rs.getString("middle_name"));
+            emp.setIdNumber(rs.getString("id_number"));
+            emp.setDateHired(rs.getDate("date_hired"));
+            emp.setEmailAddress(rs.getString("email"));
+            emp.setCurrentAddress(rs.getString("address"));
+            emp.setCellphoneNo(rs.getString("cellphone"));
+            emp.setPosition(rs.getString("position"));
+            emp.setBasicPay(rs.getDouble("basic_pay"));
+            emp.setExecutiveAllowance(rs.getDouble("exec_allowance"));
+            emp.setMarketingTranspoAllowance(rs.getDouble("marketing_allowance"));
+            emp.setMonthlySalary(rs.getDouble("monthly_salary"));
+            emp.setSssNumber(rs.getString("sss"));
+            emp.setPhilHealthNumber(rs.getString("philhealth"));
+            emp.setPagIbigNumber(rs.getString("pagibig"));
+            emp.setTinNumber(rs.getString("tin"));
+            emp.setBankAccount(rs.getString("bank_account"));
+            emp.setPhoto(rs.getBytes("photo"));
+            emp.setCompany(rs.getString("company")); // ✅ Make sure this exists in your Employee model
+
+            employees.add(emp);
+        }
+
+    } catch (Exception ex) {
+        ex.printStackTrace();
+    }
+
+    return employees;
+}
+
 }
