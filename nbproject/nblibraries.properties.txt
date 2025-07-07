@@ -1,0 +1,9 @@
+libs.apache-poi.classpath=\
+    ${base}/lib/poi-5.4.1.jar:\
+    ${base}/lib/poi-ooxml-5.4.1.jar:\
+    ${base}/lib/poi-ooxml-full-5.4.1.jar:\
+    ${base}/lib/xmlbeans-5.1.1.jar:\
+    ${base}/lib/commons-compress-1.21.jar:\
+    ${base}/lib/commons-collections4-4.4.jar:\
+    ${base}/lib/commons-math3-3.6.1.jar:\
+    ${base}/lib/curvesapi-1.06.jar
