@@ -8,15 +8,15 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import src.com.inspire.ers.DBUtil;
 
+
 import java.io.File;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 public class EmployeeForm extends JFrame {
     private HomePage homePage;
     private Employee employee;
     private boolean isEditing;
+    private String selectedCompany;
 
     // UI Components
     private JTextField firstNameField, lastNameField, middleNameField, idNumberField, emailField;
@@ -24,22 +24,30 @@ public class EmployeeForm extends JFrame {
     private JTextField execAllowanceField, marketingAllowanceField, monthlySalaryField;
     private JTextField sssField, philHealthField, pagIbigField, tinField, bankAccountField;
     private JSpinner dateHiredSpinner;
-    
+
     // Image Components
     private JLabel imageLabel;
     private JButton uploadButton;
     private byte[] employeeImageBytes;
 
-    public EmployeeForm(HomePage homePage) {
-        this(homePage, null);
+    // Static factory method for creating a new employee form with selected company
+    public static EmployeeForm createForNewEmployee(HomePage homePage, String selectedCompany) {
+        EmployeeForm form = new EmployeeForm(homePage, null);
+        form.selectedCompany = selectedCompany;
+        return form;
     }
 
+    // Constructor for editing or creating employee
     public EmployeeForm(HomePage homePage, Employee employee) {
         this.homePage = homePage;
         this.employee = employee;
         this.isEditing = (employee != null);
 
-        setTitle(isEditing ? "Edit Employee" : "Add Employee");
+        if (!isEditing && homePage != null) {
+            this.selectedCompany = homePage.getSelectedCompany();
+        }
+
+         setTitle(isEditing ? "Edit Employee" : "Add Employee");
         setSize(800, 600);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -262,7 +270,7 @@ public class EmployeeForm extends JFrame {
         return true;
     }
 
-    private void saveEmployee() {
+     private void saveEmployee() {
     if (employee == null) employee = new Employee();
 
     employee.setFirstName(firstNameField.getText().trim());
@@ -291,13 +299,13 @@ public class EmployeeForm extends JFrame {
     String sql;
     PreparedStatement stmt;
 
-    if (isEditing) {
-        sql = "UPDATE employees SET first_name=?, last_name=?, middle_name=?, id_number=?, date_hired=?, email=?, address=?, cellphone=?, position=?, basic_pay=?, exec_allowance=?, marketing_allowance=?, monthly_salary=?, sss=?, philhealth=?, pagibig=?, tin=?, bank_account=?, photo=? WHERE id=?";
-        stmt = conn.prepareStatement(sql);
-    } else {
-        sql = "INSERT INTO employees (first_name, last_name, middle_name, id_number, date_hired, email, address, cellphone, position, basic_pay, exec_allowance, marketing_allowance, monthly_salary, sss, philhealth, pagibig, tin, bank_account, photo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        stmt = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS); // to get the inserted ID
-    }
+   if (isEditing) {
+            sql = "UPDATE employees SET first_name=?, last_name=?, middle_name=?, id_number=?, date_hired=?, email=?, address=?, cellphone=?, position=?, basic_pay=?, exec_allowance=?, marketing_allowance=?, monthly_salary=?, sss=?, philhealth=?, pagibig=?, tin=?, bank_account=?, photo=?, company=? WHERE id=?";
+            stmt = conn.prepareStatement(sql);
+        } else {
+            sql = "INSERT INTO employees (first_name, last_name, middle_name, id_number, date_hired, email, address, cellphone, position, basic_pay, exec_allowance, marketing_allowance, monthly_salary, sss, philhealth, pagibig, tin, bank_account, photo, company) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            stmt = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS);
+        }
 
     // Bind values (same as before)
     stmt.setString(1,  employee.getFirstName());
@@ -319,9 +327,10 @@ public class EmployeeForm extends JFrame {
     stmt.setString(17, employee.getTinNumber());
     stmt.setString(18, employee.getBankAccount());
     stmt.setBytes(19, employee.getPhoto());
+     stmt.setString(20, selectedCompany);
 
     if (isEditing) {
-        stmt.setInt(20, employee.getId());
+        stmt.setInt(21, employee.getId());
         stmt.executeUpdate();
     } else {
         stmt.executeUpdate();
@@ -353,7 +362,6 @@ public class EmployeeForm extends JFrame {
         "Error saving employee: " + ex.getMessage(),
         "Database Error", JOptionPane.ERROR_MESSAGE);
 }
-
 
     if (isEditing) {
         homePage.refreshEmployeeList();
