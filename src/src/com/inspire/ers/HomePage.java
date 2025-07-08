@@ -5,112 +5,101 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.List;
-import com.inspire.ers.EmployeeDAO;
 
 public class HomePage extends JFrame {
     private ArrayList<Employee> employees = new ArrayList<>();
     private JLabel employeeCountLabel;
     private JPanel employeeListPanel;
-    private JPanel mainPanel;
     private JScrollPane scrollPane;
+    private JPanel mainPanel;
     private String selectedCompany;
 
     public HomePage(String company) {
         this.selectedCompany = company;
-        setTitle("Home Page - " + company);
-        
-
-        setTitle("INSPIRE EMPLOYEE RECORDS SYSTEM");
+        setTitle("INSPIRE EMPLOYEE RECORDS SYSTEM - " + company);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1600, 900);
+        setExtendedState(JFrame.MAXIMIZED_BOTH); // full screen
         setLocationRelativeTo(null);
 
-        // Set window icon
+        // Set icon
         ImageIcon icon = new ImageIcon(getClass().getResource("/images/inspirelogo2.jpg"));
         setIconImage(icon.getImage());
 
-        // Background image
-        ImageIcon backgroundImage = new ImageIcon(getClass().getResource("/images/deepocean1.jpg"));
+        // === Main Panel ===
+        mainPanel = new JPanel(new BorderLayout(20, 20));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+        mainPanel.setBackground(new Color(245, 245, 250)); // light gray background
 
-        mainPanel = new JPanel(new BorderLayout(10, 10)) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                g.drawImage(backgroundImage.getImage(), 0, 0, getWidth(), getHeight(), this);
-            }
-        };
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        mainPanel.setOpaque(false);
-
-        // Top Panel
+        // === Top Bar ===
         JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setOpaque(false);
+        topPanel.setBackground(new Color(255, 255, 255));
+        topPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
 
+       
+        // Welcome Message Panel (Centered at Top)
+JLabel welcomeLabel = new JLabel("Welcome to " + company.toUpperCase() + " Employees");
+welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
+welcomeLabel.setForeground(new Color(33, 37, 41));
+
+JPanel welcomePanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 10));
+welcomePanel.setBackground(topPanel.getBackground());
+welcomePanel.add(welcomeLabel);
+
+        // Search Field
         JTextField searchField = new JTextField(20);
+        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         searchField.setPreferredSize(new Dimension(200, 30));
-        topPanel.add(searchField, BorderLayout.EAST);
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        buttonPanel.setOpaque(false);
-
+        // Buttons
         JButton executiveBtn = new JButton("EXECUTIVE");
         JButton addEmployeeBtn = new JButton("ADD EMPLOYEE");
+        executiveBtn.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        addEmployeeBtn.setFont(new Font("Segoe UI", Font.PLAIN, 14));
 
+        // Employee Count
         employeeCountLabel = new JLabel("#Employee: 0");
-        employeeCountLabel.setForeground(Color.WHITE);
+        employeeCountLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        employeeCountLabel.setForeground(new Color(80, 80, 80));
 
-        buttonPanel.add(executiveBtn);
-        buttonPanel.add(addEmployeeBtn);
-        buttonPanel.add(Box.createHorizontalStrut(50));
-        buttonPanel.add(employeeCountLabel);
+        // Button Container
+        JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        leftPanel.setBackground(topPanel.getBackground());
+        leftPanel.add(executiveBtn);
+        leftPanel.add(addEmployeeBtn);
 
-        topPanel.add(buttonPanel, BorderLayout.WEST);
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        rightPanel.setBackground(topPanel.getBackground());
+        rightPanel.add(employeeCountLabel);
+        rightPanel.add(searchField);
 
-        // Employee list panel
-        employeeListPanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g;
+        topPanel.add(welcomePanel, BorderLayout.NORTH);
+        topPanel.add(leftPanel, BorderLayout.WEST);
+        topPanel.add(rightPanel, BorderLayout.EAST);
 
-                int width = getWidth();
-                int height = getHeight();
+        mainPanel.add(topPanel, BorderLayout.NORTH);
 
-                float[] fractions = {0.0f, 0.5f, 1.0f};
-                Color[] colors = {
-                    new Color(255, 255, 255, (int)(0.41 * 255)),
-                    new Color(226, 174, 245, (int)(0.41 * 255)),
-                    new Color(240, 230, 144, (int)(0.41 * 255)),
-                };
-
-                LinearGradientPaint gradient = new LinearGradientPaint(
-                        0, 0, width, 0, fractions, colors, MultipleGradientPaint.CycleMethod.NO_CYCLE);
-                g2d.setPaint(gradient);
-                g2d.fillRect(0, 0, width, height);
-            }
-        };
+        // === Employee List Panel ===
+        employeeListPanel = new JPanel();
         employeeListPanel.setLayout(new BoxLayout(employeeListPanel, BoxLayout.Y_AXIS));
-        employeeListPanel.setOpaque(false);
+        employeeListPanel.setBackground(mainPanel.getBackground());
 
         scrollPane = new JScrollPane(employeeListPanel);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.setOpaque(false);
-        scrollPane.getViewport().setOpaque(false);
         scrollPane.setBorder(null);
+        scrollPane.getViewport().setBackground(mainPanel.getBackground());
 
-        mainPanel.add(topPanel, BorderLayout.NORTH);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
         add(mainPanel);
 
-        // Button Listeners
+        // === Button Actions ===
         executiveBtn.addActionListener(e -> {
             ExecutivePage executivePage = new ExecutivePage();
             executivePage.setVisible(true);
         });
 
         addEmployeeBtn.addActionListener(e -> {
-          EmployeeForm employeeForm = EmployeeForm.createForNewEmployee(this, selectedCompany);
-          employeeForm.setVisible(true);
+            EmployeeForm employeeForm = EmployeeForm.createForNewEmployee(this, selectedCompany);
+            employeeForm.setVisible(true);
         });
 
         searchField.addKeyListener(new KeyAdapter() {
@@ -121,17 +110,12 @@ public class HomePage extends JFrame {
             }
         });
 
-        // Load data
+        // Load from database
         loadEmployeesFromDB();
-    }
-
-   public String getSelectedCompany() {
-        return selectedCompany;
     }
 
     private void loadEmployeesFromDB() {
         List<Employee> dbEmployees = EmployeeDAO.fetchEmployeesByCompany(selectedCompany);
-
         employees.addAll(dbEmployees);
         updateEmployeeList();
         employeeCountLabel.setText("#Employee: " + employees.size());
@@ -139,43 +123,48 @@ public class HomePage extends JFrame {
 
     private void updateEmployeeList() {
         employeeListPanel.removeAll();
-
         for (Employee employee : employees) {
-            employeeListPanel.add(createEmployeePanel(employee));
-            employeeListPanel.add(Box.createVerticalStrut(5));
+            employeeListPanel.add(createEmployeeCard(employee));
+            employeeListPanel.add(Box.createVerticalStrut(10));
         }
-
         employeeListPanel.revalidate();
         employeeListPanel.repaint();
     }
 
-    private JPanel createEmployeePanel(Employee employee) {
-        JPanel employeePanel = new JPanel(new BorderLayout());
-        employeePanel.setBorder(BorderFactory.createEtchedBorder());
+    private JPanel createEmployeeCard(Employee employee) {
+        JPanel card = new JPanel(new BorderLayout(15, 0));
+        card.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200), 1));
+        card.setBackground(Color.WHITE);
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
 
         JLabel nameLabel = new JLabel(employee.getFirstName() + " " + employee.getLastName());
-        nameLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        employeePanel.add(nameLabel, BorderLayout.WEST);
+        nameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        nameLabel.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 10));
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+        buttonPanel.setOpaque(false);
         JButton editBtn = new JButton("Edit");
-        JButton payrollBtn = new JButton("Payroll");
+        JButton timeBtn = new JButton("Time");
         JButton removeBtn = new JButton("Remove");
 
-        buttonPanel.add(payrollBtn);
+        editBtn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        timeBtn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        removeBtn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+
+        buttonPanel.add(timeBtn);
         buttonPanel.add(editBtn);
         buttonPanel.add(removeBtn);
 
-        JPanel rightWrapper = new JPanel(new GridBagLayout());
-        rightWrapper.add(buttonPanel);
-        employeePanel.add(rightWrapper, BorderLayout.EAST);
+        card.add(nameLabel, BorderLayout.WEST);
+        card.add(buttonPanel, BorderLayout.EAST);
 
+        // === Button Actions ===
         editBtn.addActionListener(e -> {
             EmployeeForm editForm = new EmployeeForm(HomePage.this, employee);
             editForm.setVisible(true);
         });
 
-        payrollBtn.addActionListener(e -> {
+        timeBtn.addActionListener(e -> {
             String middleName = employee.getMiddleName() != null ? employee.getMiddleName() : "";
             String fullName = employee.getFirstName() + " " + middleName + " " + employee.getLastName();
             String idNumber = String.valueOf(employee.getId());
@@ -194,22 +183,18 @@ public class HomePage extends JFrame {
             }
         });
 
-        return employeePanel;
+        return card;
     }
-    
-  
 
     private void filterEmployeeList(String searchText) {
         employeeListPanel.removeAll();
-
         for (Employee employee : employees) {
             String fullName = (employee.getFirstName() + " " + employee.getLastName()).toLowerCase();
             if (fullName.contains(searchText)) {
-                employeeListPanel.add(createEmployeePanel(employee));
-                employeeListPanel.add(Box.createVerticalStrut(5));
+                employeeListPanel.add(createEmployeeCard(employee));
+                employeeListPanel.add(Box.createVerticalStrut(10));
             }
         }
-
         employeeListPanel.revalidate();
         employeeListPanel.repaint();
     }
@@ -225,15 +210,23 @@ public class HomePage extends JFrame {
         loadEmployeesFromDB();
     }
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            new HomePage("IHI").setVisible(true); // ✅ Provide default company for test
-        });
+    public String getSelectedCompany() {
+        return selectedCompany;
     }
 
-    private void initComponents() {
-        // If you don’t have anything inside this, you can remove the method or leave it empty
+    public static void main(String[] args) {
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            Font uiFont = new Font("Segoe UI", Font.PLAIN, 13);
+            UIManager.put("Label.font", uiFont);
+            UIManager.put("Button.font", uiFont);
+            UIManager.put("TextField.font", uiFont);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        SwingUtilities.invokeLater(() -> {
+            new HomePage("IHI").setVisible(true);
+        });
     }
-    
-     
 }
