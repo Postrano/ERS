@@ -2,6 +2,7 @@ package com.inspire.ers;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableColumn;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -66,11 +67,37 @@ public class FinalPayrollPage extends JFrame {
             90, 100,
             100, 100, 100
         };
+        
+        table = new JTable(model);
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         for (int i = 0; i < columnWidths.length; i++) {
             TableColumn column = table.getColumnModel().getColumn(i);
             column.setPreferredWidth(columnWidths[i]);
         }
+        
+         applyColumnColoring();
+         
+         // Listen to OT HOURS column changes and update OT PAY automatically
+model.addTableModelListener(e -> {
+    int row = e.getFirstRow();
+    int column = e.getColumn();
+
+    // Check if the edited column is OT HOURS (column 14)
+    if (column == 14) {
+        try {
+            String otHoursStr = model.getValueAt(row, 14).toString();
+            double otHours = Double.parseDouble(otHoursStr);
+            double otPay = otHours * 128.85;
+
+            // Set the computed OT PAY at column 15
+            model.setValueAt(String.format("%.2f", otPay), row, 15);
+        } catch (Exception ex) {
+            model.setValueAt("0.00", row, 15);
+        }
+    }
+});
 
         JScrollPane scrollPane = new JScrollPane(table,
             JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
@@ -204,22 +231,69 @@ public class FinalPayrollPage extends JFrame {
 
         // === Recompute adjusted salary and update NET PAY column ===
         // === Fetch adjusted salary from database directly ===
-try {
-    String idNumber = updatedData[0];
-    String payDate = updatedData[21];
+        try {
+            String idNumber = updatedData[0];
+            String payDate = updatedData[21];
 
-    BigDecimal adjustedSalary = EmployeeDataFetcher.fetchAdjustedSalary(idNumber, payDate);
-    model.setValueAt(adjustedSalary.toPlainString(), selectedRow, 16); // NET PAY column
-} catch (Exception ex) {
-    JOptionPane.showMessageDialog(this, "Error fetching adjusted salary: " + ex.getMessage());
-}
+            BigDecimal adjustedSalary = EmployeeDataFetcher.fetchAdjustedSalary(idNumber, payDate);
+            model.setValueAt(adjustedSalary.toPlainString(), selectedRow, 16); // NET PAY column
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error fetching adjusted salary: " + ex.getMessage());
+        }
 
 
     } else {
         JOptionPane.showMessageDialog(this, "Update failed.");
     }
 }
+   
+   private void applyColumnColoring() {
+    // Column indexes (0-based)
+    int[] greenBackgroundCols = {5, 6, 7, 9, 11, 14};
+    int[] redTextCols = {7, 9, 11, 14};
 
+    DefaultTableCellRenderer customRenderer = new DefaultTableCellRenderer() {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                                                       boolean isSelected, boolean hasFocus,
+                                                       int row, int column) {
+            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+            // Reset styles if selected
+            if (isSelected) {
+                c.setBackground(table.getSelectionBackground());
+                c.setForeground(table.getSelectionForeground());
+            } else {
+                // Default colors
+                c.setBackground(Color.WHITE);
+                c.setForeground(Color.BLACK);
+
+                // Apply green background
+                for (int greenCol : greenBackgroundCols) {
+                    if (column == greenCol) {
+                        c.setBackground(new Color(200, 255, 200)); // light green
+                        break;
+                    }
+                }
+
+                // Apply red text
+                for (int redCol : redTextCols) {
+                    if (column == redCol) {
+                        c.setForeground(Color.RED);
+                        break;
+                    }
+                }
+            }
+
+            return c;
+        }
+    };
+
+    // Apply to all columns
+    for (int i = 0; i < table.getColumnCount(); i++) {
+        table.getColumnModel().getColumn(i).setCellRenderer(customRenderer);
+    }
+}
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
