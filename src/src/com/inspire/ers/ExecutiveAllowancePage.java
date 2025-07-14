@@ -14,9 +14,13 @@ public class ExecutiveAllowancePage extends JFrame {
     private JTable allowanceTable;
     private DefaultTableModel tableModel;
     private JComboBox<String> monthFilterCombo, nameFilterCombo;
+        private final String selectedCompany;
 
 
-    public ExecutiveAllowancePage() {
+    public ExecutiveAllowancePage(String selectedCompany) {
+        
+          this.selectedCompany = selectedCompany;
+          
         setTitle("Executive Allowance Management");
         setSize(900, 600);
         setLocationRelativeTo(null);
@@ -137,18 +141,22 @@ public class ExecutiveAllowancePage extends JFrame {
     }
 
     private void loadExecutives() {
-        try (Connection conn = DBUtil.getConnection()) {
-            executiveCombo.removeAllItems();
-            String sql = "SELECT exec_id, name FROM executive_info";
-            PreparedStatement stmt = conn.prepareStatement(sql);
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                executiveCombo.addItem(rs.getString("exec_id") + " - " + rs.getString("name"));
-            }
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error loading executives: " + ex.getMessage());
+    try (Connection conn = DBUtil.getConnection()) {
+        executiveCombo.removeAllItems();
+
+        String sql = "SELECT exec_id, name FROM executive_info WHERE company = ?";
+        PreparedStatement stmt = conn.prepareStatement(sql);
+        stmt.setString(1, selectedCompany);
+        ResultSet rs = stmt.executeQuery();
+
+        while (rs.next()) {
+            executiveCombo.addItem(rs.getString("exec_id") + " - " + rs.getString("name"));
         }
+    } catch (Exception ex) {
+        JOptionPane.showMessageDialog(this, "Error loading executives: " + ex.getMessage());
     }
+}
+
 
     private void saveAllowance() {
         String selected = (String) executiveCombo.getSelectedItem();
@@ -189,7 +197,7 @@ public class ExecutiveAllowancePage extends JFrame {
         }
     }
 
-  private void loadRecords() {
+ private void loadRecords() {
     tableModel.setRowCount(0);
 
     String selectedMonth = (String) monthFilterCombo.getSelectedItem();
@@ -199,7 +207,7 @@ public class ExecutiveAllowancePage extends JFrame {
         SELECT ea.allowance_date, ea.allowance_type, ea.amount, ei.name
         FROM executive_allowances ea
         JOIN executive_info ei ON ei.exec_id = ea.exec_id
-        WHERE 1=1
+        WHERE ei.company = ?
     """);
 
     if (!"All Months".equals(selectedMonth)) {
@@ -215,8 +223,10 @@ public class ExecutiveAllowancePage extends JFrame {
         PreparedStatement stmt = conn.prepareStatement(sql.toString());
 
         int paramIndex = 1;
+        stmt.setString(paramIndex++, selectedCompany);  // company filter
+
         if (!"All Names".equals(selectedName)) {
-            stmt.setString(paramIndex++, selectedName);
+            stmt.setString(paramIndex++, selectedName);  // name filter
         }
 
         ResultSet rs = stmt.executeQuery();
@@ -235,11 +245,13 @@ public class ExecutiveAllowancePage extends JFrame {
 }
 
 
+
     
-    private void loadExecutiveNamesForFilter() {
+   private void loadExecutiveNamesForFilter() {
     try (Connection conn = DBUtil.getConnection()) {
-        String sql = "SELECT DISTINCT name FROM executive_info ORDER BY name";
+        String sql = "SELECT DISTINCT name FROM executive_info WHERE company = ? ORDER BY name";
         PreparedStatement stmt = conn.prepareStatement(sql);
+        stmt.setString(1, selectedCompany);
         ResultSet rs = stmt.executeQuery();
         while (rs.next()) {
             nameFilterCombo.addItem(rs.getString("name"));
@@ -249,7 +261,6 @@ public class ExecutiveAllowancePage extends JFrame {
     }
 }
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new ExecutiveAllowancePage().setVisible(true));
-    }
+
+  
 }

@@ -46,28 +46,37 @@ public class AttendanceDAO {
     }
 }
 
-    public List<Attendance> getAttendance(String execId, int month, int year) throws SQLException {
-        List<Attendance> list = new ArrayList<>();
-        try (Connection conn = DBUtil.getConnection()) {
-            String sql = """
-                SELECT attendance_date, present FROM executive_attendance
-                WHERE exec_id = ? AND MONTH(attendance_date) = ? AND YEAR(attendance_date) = ?
-                ORDER BY attendance_date ASC
-            """;
-            PreparedStatement stmt = conn.prepareStatement(sql);
-            stmt.setString(1, execId);
-            stmt.setInt(2, month);
-            stmt.setInt(3, year);
-            ResultSet rs = stmt.executeQuery();
+public List<Attendance> getAttendanceBetween(String execId, java.sql.Date start, java.sql.Date end) {
+    List<Attendance> list = new ArrayList<>();
+    String sql = """
+        SELECT attendance_date, present FROM executive_attendance
+        WHERE exec_id = ? AND attendance_date BETWEEN ? AND ?
+        ORDER BY attendance_date ASC
+    """;
 
-            while (rs.next()) {
-                Attendance a = new Attendance();
-                a.setExecId(execId);
-                a.setAttendanceDate(rs.getDate("attendance_date"));
-                a.setPresent(rs.getString("present"));
-                list.add(a);
-            }
+    try (Connection conn = DBUtil.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+        stmt.setString(1, execId);
+        stmt.setDate(2, start); // use parameter directly
+        stmt.setDate(3, end);   // use parameter directly
+
+        ResultSet rs = stmt.executeQuery();
+
+        while (rs.next()) {
+            Attendance a = new Attendance();
+            a.setExecId(execId);
+            a.setAttendanceDate(rs.getDate("attendance_date"));
+            a.setPresent(rs.getString("present"));
+            list.add(a);
         }
-        return list;
+
+    } catch (SQLException e) {
+        e.printStackTrace(); // or handle with logging / UI message
     }
+
+    return list;
+}
+
+
 }
