@@ -399,7 +399,7 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
     }
 }
    
-    private void importFromCSV(File file) throws IOException, ParseException, SQLException {
+   private void importFromCSV(File file) throws IOException, ParseException, SQLException {
     BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
     String line;
     boolean firstLine = true;
@@ -415,7 +415,7 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
         String[] data = line.split(",");
 
-        if (data.length < 7) continue; // Ensure all required fields are present
+        if (data.length < 7) continue; // Ensure minimum required fields
 
         String dateStr = data[0].replace("\"", "").trim();
         String startStr = data[1].replace("\"", "").trim();
@@ -426,18 +426,28 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
         double paidAmount = Double.parseDouble(data[6].replace("\"₱", "").replace("\"", "").trim());
         String remarks = data.length > 7 ? data[7].replace("\"", "").trim() : "";
 
+        // ✅ Determine if this is a half day entry
+        boolean isHalfDay = false;
+        if (data.length > 8) {
+            String halfDayStr = data[8].replace("\"", "").trim().toLowerCase();
+            isHalfDay = halfDayStr.contains("yes") || halfDayStr.contains("1") || halfDayStr.contains("true");
+        } else {
+            isHalfDay = remarks.toLowerCase().contains("half");
+        }
+
         Date date = dateFormat.parse(dateStr);
         Date startTime = timeFormat.parse(startStr);
         Date timeIn = timeFormat.parse(timeInStr);
         Date timeOut = timeFormat.parse(timeOutStr);
 
-        saveToDatabase(date, startTime, timeIn, timeOut,overtimeMinutes, paidAmount, remarks);
+        saveToDatabase(date, startTime, timeIn, timeOut, overtimeMinutes, paidAmount, remarks, isHalfDay);
     }
 
     reader.close();
 }
 
-    private void importFromExcel(File file) throws IOException, ParseException, SQLException {
+
+  private void importFromExcel(File file) throws IOException, ParseException, SQLException {
     FileInputStream fis = new FileInputStream(file);
     Workbook workbook = new XSSFWorkbook(fis);
     Sheet sheet = workbook.getSheetAt(0);
@@ -445,98 +455,157 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
     SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
     SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm:ss a", Locale.ENGLISH);
 
-    for (int i = 1; i <= sheet.getLastRowNum(); i++) { // Skip header
+    for (int i = 1; i <= sheet.getLastRowNum(); i++) { // Skip header row
         Row row = sheet.getRow(i);
         if (row == null) continue;
 
-        String dateStr = row.getCell(0).toString().trim();
-        String startStr = row.getCell(1).toString().trim();
-        String timeInStr = row.getCell(2).toString().trim();
-        String timeOutStr = row.getCell(3).toString().trim();
-        int lateMinutes = (int) row.getCell(4).getNumericCellValue();
-        int overtimeMinutes = (int) row.getCell(5).getNumericCellValue();
-        double paidAmount = row.getCell(6).getNumericCellValue();
-        String remarks = row.getCell(7) != null ? row.getCell(7).toString().trim() : "";
+        try {
+            String dateStr = row.getCell(0).toString().trim();
+            String startStr = row.getCell(1).toString().trim();
+            String timeInStr = row.getCell(2).toString().trim();
+            String timeOutStr = row.getCell(3).toString().trim();
+            int lateMinutes = (int) row.getCell(4).getNumericCellValue();
+            int overtimeMinutes = (int) row.getCell(5).getNumericCellValue();
+            double paidAmount = row.getCell(6).getNumericCellValue();
+            String remarks = row.getCell(7) != null ? row.getCell(7).toString().trim() : "";
 
-        Date date = dateFormat.parse(dateStr);
-        Date startTime = timeFormat.parse(startStr);
-        Date timeIn = timeFormat.parse(timeInStr);
-        Date timeOut = timeFormat.parse(timeOutStr);
+            // Determine if it's a half-day based on remarks column or add a separate column (index 8)
+            boolean isHalfDay = false;
+            if (row.getLastCellNum() > 8) { // if column 9 exists (index 8)
+                String halfDayStr = row.getCell(8).toString().trim().toLowerCase();
+                isHalfDay = halfDayStr.contains("half");
+            } else {
+                isHalfDay = remarks.toLowerCase().contains("half");
+            }
 
-        saveToDatabase(date, startTime, timeIn, timeOut, overtimeMinutes, paidAmount, remarks);
+            Date date = dateFormat.parse(dateStr);
+            Date startTime = timeFormat.parse(startStr);
+            Date timeIn = timeFormat.parse(timeInStr);
+            Date timeOut = timeFormat.parse(timeOutStr);
+
+            saveToDatabase(date, startTime, timeIn, timeOut, overtimeMinutes, paidAmount, remarks, isHalfDay);
+        } catch (Exception ex) {
+            System.err.println("Error parsing row " + i + ": " + ex.getMessage());
+        }
     }
 
     workbook.close();
     fis.close();
 }
+
   
-   private void showAddAttendanceDialog() {
+  private void showAddAttendanceDialog() {
     JDialog dialog = new JDialog(this, "Add Attendance", true);
-    dialog.setSize(450, 450);
+    dialog.setSize(300, 400);
     dialog.setLocationRelativeTo(this);
 
-    JPanel panel = new JPanel(new GridLayout(0, 2, 10, 10));
+    JPanel panel = new JPanel(new GridBagLayout());
     panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(10, 10, 10, 10);
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    gbc.anchor = GridBagConstraints.WEST;
 
-    // Date Spinner
+    Font labelFont = new Font("Segoe UI", Font.PLAIN, 14);
+
+    // === Row 0: Date ===
+    gbc.gridx = 0; gbc.gridy = 0;
+    JLabel dateLabel = new JLabel("Date:");
+    dateLabel.setFont(labelFont);
+    panel.add(dateLabel, gbc);
+
+    gbc.gridx = 1;
     SpinnerDateModel dateModel = new SpinnerDateModel();
     JSpinner dateSpinner = new JSpinner(dateModel);
-    JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(dateSpinner, "MM/dd/yyyy");
-    dateSpinner.setEditor(dateEditor);
-    panel.add(new JLabel("DATE"));
-    panel.add(dateSpinner);
+    dateSpinner.setEditor(new JSpinner.DateEditor(dateSpinner, "MM/dd/yyyy"));
+    panel.add(dateSpinner, gbc);
 
-    // Time In
+    // === Row 1: Time-In ===
+    gbc.gridx = 0; gbc.gridy++;
+    JLabel timeInLabel = new JLabel("Time-In:");
+    timeInLabel.setFont(labelFont);
+    panel.add(timeInLabel, gbc);
+
+    gbc.gridx = 1;
     JSpinner timeInSpinner = new JSpinner(new SpinnerDateModel());
-    JSpinner.DateEditor timeInEditor = new JSpinner.DateEditor(timeInSpinner, "hh:mm:ss a");
-    timeInSpinner.setEditor(timeInEditor);
-    panel.add(new JLabel("TIME-IN"));
-    panel.add(timeInSpinner);
+    timeInSpinner.setEditor(new JSpinner.DateEditor(timeInSpinner, "hh:mm:ss a"));
+    panel.add(timeInSpinner, gbc);
 
-    // Time Out
+    // === Row 2: Time-Out ===
+    gbc.gridx = 0; gbc.gridy++;
+    JLabel timeOutLabel = new JLabel("Time-Out:");
+    timeOutLabel.setFont(labelFont);
+    panel.add(timeOutLabel, gbc);
+
+    gbc.gridx = 1;
     JSpinner timeOutSpinner = new JSpinner(new SpinnerDateModel());
-    JSpinner.DateEditor timeOutEditor = new JSpinner.DateEditor(timeOutSpinner, "hh:mm:ss a");
-    timeOutSpinner.setEditor(timeOutEditor);
-    panel.add(new JLabel("TIME-OUT"));
-    panel.add(timeOutSpinner);
+    timeOutSpinner.setEditor(new JSpinner.DateEditor(timeOutSpinner, "hh:mm:ss a"));
+    panel.add(timeOutSpinner, gbc);
 
-    // Start Time
+    // === Row 3: Start Time ===
+    gbc.gridx = 0; gbc.gridy++;
+    JLabel startLabel = new JLabel("Start Time:");
+    startLabel.setFont(labelFont);
+    panel.add(startLabel, gbc);
+
+    gbc.gridx = 1;
     JSpinner startTimeSpinner = new JSpinner(new SpinnerDateModel());
-    JSpinner.DateEditor startTimeEditor = new JSpinner.DateEditor(startTimeSpinner, "hh:mm:ss a");
-    startTimeSpinner.setEditor(startTimeEditor);
-    panel.add(new JLabel("START-TIME"));
-    panel.add(startTimeSpinner);
+    startTimeSpinner.setEditor(new JSpinner.DateEditor(startTimeSpinner, "hh:mm:ss a"));
+    panel.add(startTimeSpinner, gbc);
 
-    // Checkboxes
+    // === Row 4: Checkboxes (Status) ===
+    gbc.gridx = 0; gbc.gridy++;
+    gbc.gridwidth = 2;
+    JPanel checkboxPanel = new JPanel(new GridLayout(2, 2, 10, 5));
+    checkboxPanel.setBorder(BorderFactory.createTitledBorder("Attendance Type"));
+
     JCheckBox presentCheckBox = new JCheckBox("Present");
     JCheckBox absentCheckBox = new JCheckBox("Absent");
     JCheckBox holidayCheckBox = new JCheckBox("Holiday");
+    JCheckBox halfDayCheckBox = new JCheckBox("Half Day");
 
-    panel.add(presentCheckBox);
-    panel.add(absentCheckBox);
-    panel.add(new JLabel("")); // Empty label to align holiday
-    panel.add(holidayCheckBox);
+    checkboxPanel.add(presentCheckBox);
+    checkboxPanel.add(absentCheckBox);
+    checkboxPanel.add(holidayCheckBox);
+    checkboxPanel.add(halfDayCheckBox);
 
-    // Checkbox logic
+    panel.add(checkboxPanel, gbc);
+
+    // === Row 5: Submit Button ===
+    gbc.gridy++;
+    gbc.gridwidth = 2;
+    gbc.anchor = GridBagConstraints.CENTER;
+
+    JButton submitButton = new JButton("Submit");
+    submitButton.setPreferredSize(new Dimension(120, 35));
+    panel.add(submitButton, gbc);
+
+    // === Logic: Checkbox interdependency ===
     ItemListener checkboxListener = e -> {
         boolean isPresent = presentCheckBox.isSelected();
         boolean isAbsent = absentCheckBox.isSelected();
         boolean isHoliday = holidayCheckBox.isSelected();
+        boolean isHalfDay = halfDayCheckBox.isSelected();
 
-        // Only one option can be selected
         if (e.getSource() == presentCheckBox && isPresent) {
             absentCheckBox.setSelected(false);
             holidayCheckBox.setSelected(false);
+            halfDayCheckBox.setSelected(false);
         } else if (e.getSource() == absentCheckBox && isAbsent) {
             presentCheckBox.setSelected(false);
             holidayCheckBox.setSelected(false);
+            halfDayCheckBox.setSelected(false);
         } else if (e.getSource() == holidayCheckBox && isHoliday) {
             presentCheckBox.setSelected(false);
             absentCheckBox.setSelected(false);
+            halfDayCheckBox.setSelected(false);
+        } else if (e.getSource() == halfDayCheckBox && isHalfDay) {
+            presentCheckBox.setSelected(false);
+            absentCheckBox.setSelected(false);
+            holidayCheckBox.setSelected(false);
         }
 
-        // Disable time fields if Absent or Holiday
-        boolean enableFields = presentCheckBox.isSelected();
+        boolean enableFields = isPresent || isHalfDay;
         timeInSpinner.setEnabled(enableFields);
         timeOutSpinner.setEnabled(enableFields);
         startTimeSpinner.setEnabled(enableFields);
@@ -545,51 +614,60 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
     presentCheckBox.addItemListener(checkboxListener);
     absentCheckBox.addItemListener(checkboxListener);
     holidayCheckBox.addItemListener(checkboxListener);
+    halfDayCheckBox.addItemListener(checkboxListener);
 
-    // Submit Button
-    JButton submitButton = new JButton("SUBMIT");
+    // === Button Action ===
     submitButton.addActionListener(e2 -> {
-        if (!presentCheckBox.isSelected() && !absentCheckBox.isSelected() && !holidayCheckBox.isSelected()) {
-            JOptionPane.showMessageDialog(dialog, "Please select Present, Absent, or Holiday.");
+        if (!presentCheckBox.isSelected() && !absentCheckBox.isSelected() &&
+            !holidayCheckBox.isSelected() && !halfDayCheckBox.isSelected()) {
+            JOptionPane.showMessageDialog(dialog, "Please select an attendance type.");
             return;
         }
 
         SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
         SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm:ss a");
 
+        Date selectedDate = (Date) dateSpinner.getValue();
         Date timeIn = (Date) timeInSpinner.getValue();
         Date timeOut = (Date) timeOutSpinner.getValue();
         Date startTime = (Date) startTimeSpinner.getValue();
-        Date selectedDate = (Date) dateSpinner.getValue();
 
         int lateMinutes = 0;
         int overtimeMinutes = 0;
         double paidAmount = 0;
         String remarks = "";
 
-        double perMinuteRate = getBaseSalaryFromDB(selectedDate); // <-- using your method
+        double perMinuteRate = getBaseSalaryFromDB(selectedDate);
+        boolean isHalfDay = halfDayCheckBox.isSelected();
 
         if (presentCheckBox.isSelected()) {
-           lateMinutes = calculateLateMinutes(timeIn, startTime);
-
+            lateMinutes = calculateLateMinutes(timeIn, startTime);
             overtimeMinutes = calculateOvertimeMinutes(timeIn, timeOut);
             double totalMinutesWorked = 480 + overtimeMinutes - lateMinutes;
             double deduction = lateMinutes * LATE_PENALTY_PER_MINUTE;
 
             paidAmount = (perMinuteRate * totalMinutesWorked) - deduction;
-            remarks = getRemarks(timeIn, timeOut);
+            remarks = getRemarks(timeIn, timeOut, false);
         } else if (absentCheckBox.isSelected()) {
             remarks = "Absent";
         } else if (holidayCheckBox.isSelected()) {
-            paidAmount = perMinuteRate * 480; // full day's pay
+            paidAmount = perMinuteRate * 480;
             remarks = "Holiday";
+        } else if (halfDayCheckBox.isSelected()) {
+            lateMinutes = calculateLateMinutes(timeIn, startTime);
+            overtimeMinutes = calculateOvertimeMinutes(timeIn, timeOut);
+            double totalMinutesWorked = 240 + overtimeMinutes - lateMinutes;
+            double deduction = lateMinutes * LATE_PENALTY_PER_MINUTE;
+
+            paidAmount = (perMinuteRate * totalMinutesWorked) - deduction;
+            remarks = getRemarks(timeIn, timeOut, true);
         }
 
         Object[] rowData = {
             null,
             dateFormat.format(selectedDate),
-            presentCheckBox.isSelected() ? timeFormat.format(timeIn) : "",
-            presentCheckBox.isSelected() ? timeFormat.format(timeOut) : "",
+            presentCheckBox.isSelected() || halfDayCheckBox.isSelected() ? timeFormat.format(timeIn) : "",
+            presentCheckBox.isSelected() || halfDayCheckBox.isSelected() ? timeFormat.format(timeOut) : "",
             lateMinutes,
             overtimeMinutes,
             String.format("₱%.2f", paidAmount),
@@ -597,16 +675,9 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
         };
 
         tableModel.addRow(rowData);
-        saveToDatabase(selectedDate, startTime, timeIn, timeOut, overtimeMinutes, paidAmount, remarks);
+        saveToDatabase(selectedDate, startTime, timeIn, timeOut, overtimeMinutes, paidAmount, remarks, isHalfDay);
         dialog.dispose();
     });
-
-    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-    buttonPanel.add(submitButton);
-
-    dialog.setLayout(new BorderLayout());
-    dialog.add(panel, BorderLayout.CENTER);
-    dialog.add(buttonPanel, BorderLayout.SOUTH);
 
     // Default to Present
     presentCheckBox.setSelected(true);
@@ -614,8 +685,10 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
     timeOutSpinner.setEnabled(true);
     startTimeSpinner.setEnabled(true);
 
+    dialog.setContentPane(panel);
     dialog.setVisible(true);
 }
+
 
     
     public double computePerMinuteRate(double monthlySalary, Date forMonth) {
@@ -662,17 +735,18 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
     int selectedId = (int) tableModel.getValueAt(selectedRow, 0); // hidden id
 
     JDialog dialog = new JDialog(this, "Edit Attendance", true);
-    dialog.setSize(400, 300);
+    dialog.setSize(400, 350);
     dialog.setLocationRelativeTo(this);
 
     JPanel panel = new JPanel(new GridLayout(0, 2, 10, 10));
-    panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+    panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 10, 20));
 
     // Load selected values
     String dateStr = tableModel.getValueAt(selectedRow, 1).toString();     // Date
     String startStr = tableModel.getValueAt(selectedRow, 2).toString();    // Start Time
     String timeInStr = tableModel.getValueAt(selectedRow, 3).toString();   // Time-in
     String timeOutStr = tableModel.getValueAt(selectedRow, 4).toString();  // Time-out
+    String remarksStr = tableModel.getValueAt(selectedRow, 7).toString();  // Remarks
 
     // Components
     JSpinner dateSpinner = new JSpinner(new SpinnerDateModel());
@@ -686,6 +760,9 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
     JSpinner timeOutSpinner = new JSpinner(new SpinnerDateModel());
     timeOutSpinner.setEditor(new JSpinner.DateEditor(timeOutSpinner, "hh:mm:ss a"));
+
+    JCheckBox halfDayCheckbox = new JCheckBox("Half Day");
+    halfDayCheckbox.setSelected(remarksStr.toLowerCase().contains("half"));
 
     // Set spinner values from table
     try {
@@ -709,6 +786,8 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
     panel.add(timeInSpinner);
     panel.add(new JLabel("TIME-OUT"));
     panel.add(timeOutSpinner);
+    panel.add(new JLabel("")); // spacer
+    panel.add(halfDayCheckbox);
 
     // Submit Button
     JButton submitButton = new JButton("SAVE");
@@ -727,28 +806,32 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
             double perMinute = getBaseSalaryFromDB(date); // user-defined function
             double paidAmount = perMinute * totalMinutesWorked;
-            String remarks = getRemarks(timeIn, timeOut); // user-defined function
+
+            boolean isHalfDay = halfDayCheckbox.isSelected();
+            String remarks = getRemarks(timeIn, timeOut, isHalfDay);
+            if (isHalfDay && !remarks.toLowerCase().contains("half")) {
+                remarks += " Half Day";
+            }
 
             // Update JTable
             SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
             SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm:ss a");
 
-            tableModel.setValueAt(dateFormat.format(date), selectedRow, 1);      // DATE
-            tableModel.setValueAt(timeFormat.format(startTime), selectedRow, 2); // START-TIME
-            tableModel.setValueAt(timeFormat.format(timeIn), selectedRow, 3);    // TIME-IN
-            tableModel.setValueAt(timeFormat.format(timeOut), selectedRow, 4);   // TIME-OUT
-            tableModel.setValueAt(String.format("%.2f", totalMinutesWorked / 60.0), selectedRow, 5); // TOTAL-HOURS
-            tableModel.setValueAt(String.format("₱%.2f", paidAmount), selectedRow, 6); // PAID AMOUNT
-            tableModel.setValueAt(remarks, selectedRow, 7); // REMARKS
-            tableModel.setValueAt(lateMinutes, selectedRow, 8); // LATE
-            tableModel.setValueAt(String.format("₱%.2f", lateMinutes * LATE_PENALTY_PER_MINUTE), selectedRow, 9); // LATE DEDUCTION
-            tableModel.setValueAt(overtimeMinutes, selectedRow, 10); // OVERTIME
-            tableModel.setValueAt(totalMinutesWorked, selectedRow, 11); // TOTAL MINUTES
+            tableModel.setValueAt(dateFormat.format(date), selectedRow, 1);
+            tableModel.setValueAt(timeFormat.format(startTime), selectedRow, 2);
+            tableModel.setValueAt(timeFormat.format(timeIn), selectedRow, 3);
+            tableModel.setValueAt(timeFormat.format(timeOut), selectedRow, 4);
+            tableModel.setValueAt(String.format("%.2f", totalMinutesWorked / 60.0), selectedRow, 5);
+            tableModel.setValueAt(String.format("₱%.2f", paidAmount), selectedRow, 6);
+            tableModel.setValueAt(remarks, selectedRow, 7);
+            tableModel.setValueAt(lateMinutes, selectedRow, 8);
+            tableModel.setValueAt(String.format("₱%.2f", lateMinutes * LATE_PENALTY_PER_MINUTE), selectedRow, 9);
+            tableModel.setValueAt(overtimeMinutes, selectedRow, 10);
+            tableModel.setValueAt(totalMinutesWorked, selectedRow, 11);
 
-            // Save to DB
-            updatePayrollInDatabase(selectedId, date, startTime, timeIn, timeOut, overtimeMinutes, paidAmount, remarks);
+            updatePayrollInDatabase(selectedId, date, startTime, timeIn, timeOut, overtimeMinutes, paidAmount, remarks, isHalfDay);
 
-            loadDataFromDatabase(null, null); // Refresh table
+            loadDataFromDatabase(null, null);
             dialog.dispose();
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -764,6 +847,7 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
     dialog.add(buttonPanel, BorderLayout.SOUTH);
     dialog.setVisible(true);
 }
+
 
 
     private void removeSelectedRow() {
@@ -807,7 +891,7 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
     return String.format("%02d:%02d", hours, mins);
 }
     
- private int calculateLateMinutes(Date timeIn, Date startTime) {
+    private int calculateLateMinutes(Date timeIn, Date startTime) {
     if (timeIn == null || startTime == null) return 0;
 
     Calendar in = Calendar.getInstance();
@@ -951,35 +1035,52 @@ private double getBaseSalaryFromDB(Date selectedDate) {
     return 0.0;
 }
     
-    private String getRemarks(Date timeIn, Date timeOut) {
-        Calendar calIn = Calendar.getInstance();
-        calIn.setTime(timeIn);
+private String getRemarks(Date timeIn, Date timeOut, boolean isHalfDay) {
+    Calendar calIn = Calendar.getInstance();
+    calIn.setTime(timeIn);
+    calIn.set(Calendar.SECOND, 0);
+    calIn.set(Calendar.MILLISECOND, 0);
 
-        Calendar calOut = Calendar.getInstance();
-        calOut.setTime(timeOut);
+    Calendar calOut = Calendar.getInstance();
+    calOut.setTime(timeOut);
+    calOut.set(Calendar.SECOND, 0);
+    calOut.set(Calendar.MILLISECOND, 0);
 
-        // Scheduled times
-        Calendar scheduledIn = (Calendar) calIn.clone();
-        scheduledIn.set(Calendar.HOUR_OF_DAY, 9);
-        scheduledIn.set(Calendar.MINUTE, 30);
-        scheduledIn.set(Calendar.SECOND, 0);
+    Calendar scheduledIn = Calendar.getInstance();
+    scheduledIn.setTime(timeIn); // use same date
+    scheduledIn.set(Calendar.HOUR_OF_DAY, 9);
+    scheduledIn.set(Calendar.MINUTE, 30);
+    scheduledIn.set(Calendar.SECOND, 0);
+    scheduledIn.set(Calendar.MILLISECOND, 0);
 
-        Calendar scheduledOut = (Calendar) calOut.clone();
-        scheduledOut.set(Calendar.HOUR_OF_DAY, 18); // 6:30 PM is 18:30
-        scheduledOut.set(Calendar.MINUTE, 30);
-        scheduledOut.set(Calendar.SECOND, 0);
+    Calendar scheduledOut = Calendar.getInstance();
+    scheduledOut.setTime(timeOut); // use same date
+    scheduledOut.set(Calendar.HOUR_OF_DAY, 18);
+    scheduledOut.set(Calendar.MINUTE, 30);
+    scheduledOut.set(Calendar.SECOND, 0);
+    scheduledOut.set(Calendar.MILLISECOND, 0);
 
-        boolean isLate = timeIn.after(scheduledIn.getTime());
-        boolean isEarlyLeave = timeOut.before(scheduledOut.getTime());
+    boolean isLate = calIn.getTime().after(scheduledIn.getTime());
+    boolean isEarlyLeave = calOut.getTime().before(scheduledOut.getTime());
 
-//        if (isLate && isEarlyLeave) return "Tardy, Early Leaving";
-//        else if (isLate) return "Tardy";
-        if (isLate) return "Tardy";
-        else if (isEarlyLeave) return "Early Leaving";
-        else return "On Time";
-     }
-    
-    private void updatePayrollInDatabase(int id, Date date, Date startTime, Date timeIn, Date timeOut, int overtimeMinutes, double paidAmount, String remarks) {
+    StringBuilder remark = new StringBuilder();
+
+    if (isLate) remark.append("Tardy");
+    if (isEarlyLeave) {
+        if (remark.length() > 0) remark.append(", ");
+        remark.append("Early Leaving");
+    }
+    if (remark.length() == 0) remark.append("On Time");
+
+    if (isHalfDay) {
+        remark.append(" (Half Day)");
+    }
+
+    return remark.toString();
+}
+ 
+  private void updatePayrollInDatabase(int id, Date date, Date startTime, Date timeIn, Date timeOut,
+                                     int overtimeMinutes, double paidAmount, String remarks, boolean isHalfDay) {
     SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
     SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
 
@@ -987,11 +1088,11 @@ private double getBaseSalaryFromDB(Date selectedDate) {
     int totalMinutes = calculateTotalMinutes(timeIn, timeOut);
     double totalHours = totalMinutes / 60.0;
 
-    // ✅ Compute late minutes based on startTime vs timeIn
+    // Compute late minutes
     int lateMinutes = 0;
     if (timeIn.after(startTime)) {
         long diffMillis = timeIn.getTime() - startTime.getTime();
-        lateMinutes = (int) (diffMillis / (1000 * 60)); // convert to minutes
+        lateMinutes = (int) (diffMillis / (1000 * 60));
     }
 
     // Compute late deduction
@@ -999,23 +1100,24 @@ private double getBaseSalaryFromDB(Date selectedDate) {
 
     String sql = "UPDATE employee_payroll SET attendance_date = ?, start_time = ?, time_in = ?, time_out = ?, " +
                  "late_minutes = ?, late_deduction = ?, total_minutes = ?, total_hours = ?, " +
-                 "overtime_minutes = ?, paid_amount = ?, remarks = ? WHERE id = ?";
+                 "overtime_minutes = ?, paid_amount = ?, remarks = ?, half_day = ? WHERE id = ?";
 
     try (Connection conn = DBUtil.getConnection();
          PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-        stmt.setString(1, dateFormat.format(date));         // attendance_date
-        stmt.setString(2, timeFormat.format(startTime));    // start_time
-        stmt.setString(3, timeFormat.format(timeIn));       // time_in
-        stmt.setString(4, timeFormat.format(timeOut));      // time_out
-        stmt.setInt(5, lateMinutes);                        // late_minutes ✅ dynamically computed
-        stmt.setDouble(6, lateDeduction);                   // late_deduction
-        stmt.setInt(7, totalMinutes);                       // total_minutes
-        stmt.setDouble(8, totalHours);                      // total_hours
-        stmt.setInt(9, overtimeMinutes);                    // overtime_minutes
-        stmt.setDouble(10, paidAmount);                     // paid_amount
-        stmt.setString(11, remarks);                        // remarks
-        stmt.setInt(12, id);                                // id (WHERE)
+        stmt.setString(1, dateFormat.format(date));
+        stmt.setString(2, timeFormat.format(startTime));
+        stmt.setString(3, timeFormat.format(timeIn));
+        stmt.setString(4, timeFormat.format(timeOut));
+        stmt.setInt(5, lateMinutes);
+        stmt.setDouble(6, lateDeduction);
+        stmt.setInt(7, totalMinutes);
+        stmt.setDouble(8, totalHours);
+        stmt.setInt(9, overtimeMinutes);
+        stmt.setDouble(10, paidAmount);
+        stmt.setString(11, remarks);
+        stmt.setInt(12, isHalfDay ? 1 : 0);
+        stmt.setInt(13, id);
 
         stmt.executeUpdate();
     } catch (Exception ex) {
@@ -1024,7 +1126,8 @@ private double getBaseSalaryFromDB(Date selectedDate) {
     }
 }
 
-private void savePayrollSummaryToDatabase(int employeeId, int month, int year,
+
+    private void savePayrollSummaryToDatabase(int employeeId, int month, int year,
                                           double ratePerMinute, double ratePerDay,
                                           double ratePerMonth, double totalAmount,
                                           int totalOvertime, double finalTotal,
@@ -1070,7 +1173,7 @@ private void savePayrollSummaryToDatabase(int employeeId, int month, int year,
 }
 
    
-    private void saveToDatabase(Date date, Date startTime, Date timeIn, Date timeOut, int overtimeMinutes, double paidAmount, String remarks) {
+    private void saveToDatabase(Date date, Date startTime, Date timeIn, Date timeOut, int overtimeMinutes, double paidAmount, String remarks,boolean isHalfDay) {
     SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
     SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
 
@@ -1087,7 +1190,7 @@ private void savePayrollSummaryToDatabase(int employeeId, int month, int year,
     // ✅ Compute late deduction
     double lateDeduction = lateMinutes * LATE_PENALTY_PER_MINUTE;
 
-    String sql = "INSERT INTO employee_payroll (employee_name, attendance_date, start_time, time_in, time_out, total_hours, paid_amount, remarks, late_minutes, late_deduction, overtime_minutes, total_minutes, employee_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    String sql = "INSERT INTO employee_payroll (employee_name, attendance_date, start_time, time_in, time_out, total_hours, paid_amount, remarks, late_minutes, late_deduction, overtime_minutes, total_minutes, employee_id, half_day) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     try (Connection conn = DBUtil.getConnection();
          PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -1105,7 +1208,7 @@ private void savePayrollSummaryToDatabase(int employeeId, int month, int year,
         stmt.setInt(11, overtimeMinutes);                             // overtime_minutes
         stmt.setInt(12, totalMinutes);                                // total_minutes
         stmt.setInt(13, employeeId);                                  // employee_id
-
+        stmt.setInt(14, isHalfDay ? 1 : 0);                           // Set 1 for true, 0 for false
         stmt.executeUpdate();
         System.out.println("Saved to DB: " + employeeName);
     } catch (Exception ex) {
@@ -1199,14 +1302,12 @@ private void savePayrollSummaryToDatabase(int employeeId, int month, int year,
         totalLateDeduction += lateDeduction;
     }
 }
-
-
         // Executive Allowance
         double execAllowance = fetchExecAllowance();
         totalAmount += execAllowance;
 
         // Total overtime pay
-        double overtimeRatePerMinute = 128.0 / 60.0;
+        double overtimeRatePerMinute = 128.85 / 60.0;
         double totalOvertimePay = totalOvertimeMinutes * overtimeRatePerMinute;
 
         // Final total = base + overtime - late deductions

@@ -169,7 +169,8 @@ public class HomePage extends JFrame {
 
         // === Button Actions ===
         editBtn.addActionListener(e -> {
-            EmployeeForm editForm = new EmployeeForm(HomePage.this, employee);
+          EmployeeForm editForm = new EmployeeForm(HomePage.this, employee, getSelectedCompany());
+
             editForm.setVisible(true);
         });
 
