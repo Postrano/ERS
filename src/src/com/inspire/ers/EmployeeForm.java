@@ -32,16 +32,17 @@ public class EmployeeForm extends JFrame {
 
     // Static factory method for creating a new employee form with selected company
     public static EmployeeForm createForNewEmployee(HomePage homePage, String selectedCompany) {
-        EmployeeForm form = new EmployeeForm(homePage, null);
+       EmployeeForm form = new EmployeeForm(homePage, null, selectedCompany);
         form.selectedCompany = selectedCompany;
         return form;
     }
 
     // Constructor for editing or creating employee
-    public EmployeeForm(HomePage homePage, Employee employee) {
-        this.homePage = homePage;
-        this.employee = employee;
-        this.isEditing = (employee != null);
+        public EmployeeForm(HomePage homePage, Employee employee, String selectedCompany) {
+         this.homePage = homePage;
+         this.employee = employee;
+         this.isEditing = (employee != null);
+         this.selectedCompany = selectedCompany;
 
         if (!isEditing && homePage != null) {
             this.selectedCompany = homePage.getSelectedCompany();

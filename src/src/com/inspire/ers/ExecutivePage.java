@@ -16,8 +16,8 @@ public class ExecutivePage extends JFrame {
     private JComboBox<String> dayCombo, monthCombo, yearCombo;
     private JComboBox<String> statusCombo;
     private final String selectedCompany;
-   private JSpinner cutOffStartDateSpinner;
-private JSpinner cutOffEndDateSpinner;
+    private JSpinner cutOffStartDateSpinner;
+    private JSpinner cutOffEndDateSpinner;
 
 
     public ExecutivePage(String selectedCompany) {
@@ -62,8 +62,10 @@ private JSpinner cutOffEndDateSpinner;
         JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
         splitPane.setResizeWeight(0.5);
 
-        String[] executiveCols = {
-            "ID No", "Name", "Department/Position", "Bank", "Basic Pay", "Allowance"
+       String[] executiveCols = {
+            "ID No", "Name", "Department/Position", "Bank",
+            "Basic Pay", "Allowance", "SSS Number", "SSS Value",
+            "Pag-IBIG Number", "TIN Number", "PhilHealth Number"
         };
         executiveModel = new DefaultTableModel(executiveCols, 0);
         executiveTable = new JTable(executiveModel);
@@ -134,47 +136,58 @@ private JSpinner cutOffEndDateSpinner;
     }
 
    public void loadExecutives() {
-        executiveModel.setRowCount(0);
-        executiveFilterCombo.removeAllItems();
-        try (Connection conn = DBUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement("SELECT exec_id, name FROM executive_info WHERE company = ?")) {
-            stmt.setString(1, selectedCompany);
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                String execId = rs.getString("exec_id");
-                String name = rs.getString("name");
-                executiveModel.addRow(new Object[]{execId, name});
-                executiveFilterCombo.addItem(execId + " - " + name);
-            }
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Error loading executives: " + e.getMessage());
-        }
-    }
+    executiveModel.setRowCount(0);
+    executiveFilterCombo.removeAllItems();
 
-    private void loadExecutiveInfo() {
-        executiveModel.setRowCount(0);
-        String selected = (String) executiveFilterCombo.getSelectedItem();
-        if (selected == null) return;
+    try (Connection conn = DBUtil.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(
+             "SELECT exec_id, name FROM executive_info WHERE company = ?")) {
+        stmt.setString(1, selectedCompany);
+        ResultSet rs = stmt.executeQuery();
 
-        String execId = selected.split(" - ")[0];
-        try (Connection conn = DBUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement("SELECT * FROM executive_info WHERE exec_id = ?")) {
-            stmt.setString(1, execId);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                executiveModel.addRow(new Object[]{
-                    rs.getString("exec_id"),
-                    rs.getString("name"),
-                    rs.getString("department_or_position"),
-                    rs.getString("bank"),
-                    "₱" + String.format("%,.2f", rs.getDouble("basic_pay")),
-                    "₱" + String.format("%,.2f", rs.getDouble("allowance"))
-                });
-            }
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Failed to load executive info: " + ex.getMessage());
+        while (rs.next()) {
+            String execId = rs.getString("exec_id");
+            String name = rs.getString("name");
+            executiveFilterCombo.addItem(execId + " - " + name);
         }
+    } catch (SQLException e) {
+        JOptionPane.showMessageDialog(this, "Error loading executives: " + e.getMessage());
     }
+}
+
+
+  private void loadExecutiveInfo() {
+    executiveModel.setRowCount(0);
+    String selected = (String) executiveFilterCombo.getSelectedItem();
+    if (selected == null) return;
+
+    String execId = selected.split(" - ")[0];
+
+    try (Connection conn = DBUtil.getConnection();
+         PreparedStatement stmt = conn.prepareStatement("SELECT * FROM executive_info WHERE exec_id = ?")) {
+        stmt.setString(1, execId);
+        ResultSet rs = stmt.executeQuery();
+
+        if (rs.next()) {
+            executiveModel.addRow(new Object[]{
+                rs.getString("exec_id"),
+                rs.getString("name"),
+                rs.getString("department_or_position"),
+                rs.getString("bank"),
+                "₱" + String.format("%,.2f", rs.getDouble("basic_pay")),
+                "₱" + String.format("%,.2f", rs.getDouble("allowance")),
+                rs.getString("sss_number"),
+                "₱" + String.format("%,.2f", rs.getDouble("sss_value")),
+                rs.getString("pagibig_number"),
+                rs.getString("tin_number"),
+                rs.getString("philhealth_number")
+            });
+        }
+    } catch (Exception ex) {
+        JOptionPane.showMessageDialog(this, "Failed to load executive info: " + ex.getMessage());
+    }
+}
+
 
     private void saveAttendanceStatus() {
         String selectedExec = (String) executiveFilterCombo.getSelectedItem();
@@ -196,7 +209,7 @@ private JSpinner cutOffEndDateSpinner;
         }
     }
 
-  private void loadAttendanceRecords() {
+    private void loadAttendanceRecords() {
     attendanceModel.setRowCount(0);
     String selected = (String) executiveFilterCombo.getSelectedItem();
     if (selected == null) return;
@@ -283,35 +296,41 @@ private JSpinner cutOffEndDateSpinner;
             }
         }
     }
-
     private void editSelectedExecutive() {
-        String selected = (String) executiveFilterCombo.getSelectedItem();
-        if (selected == null) {
-            JOptionPane.showMessageDialog(this, "Please select an executive.");
-            return;
-        }
+             String selected = (String) executiveFilterCombo.getSelectedItem();
+             if (selected == null) {
+                 JOptionPane.showMessageDialog(this, "Please select an executive.");
+                 return;
+             }
 
-        String execId = selected.split(" - ")[0];
-        try (Connection conn = DBUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement("SELECT * FROM executive_info WHERE exec_id = ?")) {
-            stmt.setString(1, execId);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                AddExecutiveForm form = new AddExecutiveForm(
-                    this, selectedCompany,
-                    rs.getString("exec_id"),
-                    rs.getString("name"),
-                    rs.getString("department_or_position"),
-                    rs.getString("bank"),
-                    rs.getDouble("basic_pay"),
-                    rs.getDouble("allowance")
-                );
-                form.setVisible(true);
-            }
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Error loading executive: " + e.getMessage());
-        }
-    }
+             String execId = selected.split(" - ")[0];
+             try (Connection conn = DBUtil.getConnection();
+                  PreparedStatement stmt = conn.prepareStatement("SELECT * FROM executive_info WHERE exec_id = ?")) {
+                 stmt.setString(1, execId);
+                 ResultSet rs = stmt.executeQuery();
+                 if (rs.next()) {
+                     AddExecutiveForm form = new AddExecutiveForm(
+                         this, selectedCompany,
+                         rs.getString("exec_id"),
+                         rs.getString("name"),
+                         rs.getString("department_or_position"),
+                         rs.getString("bank"),
+                         rs.getDouble("basic_pay"),
+                         rs.getDouble("allowance"),
+                         rs.getString("sss_number"),
+                         rs.getDouble("sss_value"),
+                        
+                         rs.getString("pagibig_number"),
+                         rs.getString("tin_number"),
+                         rs.getString("philhealth_number")
+                     );
+                     form.setVisible(true);
+                 }
+             } catch (SQLException e) {
+                 JOptionPane.showMessageDialog(this, "Error loading executive: " + e.getMessage());
+             }
+         }
+
 
     private void deleteSelectedExecutive() {
         String selected = (String) executiveFilterCombo.getSelectedItem();

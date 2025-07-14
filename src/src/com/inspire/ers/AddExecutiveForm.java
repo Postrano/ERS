@@ -13,35 +13,59 @@ public class AddExecutiveForm extends JDialog {
     private JTextField basicPayField, allowanceField;
     private final String selectedCompany;
     private final ExecutivePage executivePage;
-    private boolean isEditMode = false; // Flag to distinguish between Add and Edit
+    private boolean isEditMode = false;
+    private JTextField sssNumberField, sssValueField;
+    private JTextField pagibigNumberField, tinNumberField, philhealthNumberField;
 
     public AddExecutiveForm(ExecutivePage parent, String selectedCompany) {
         super(parent, "Add Executive", true);
         this.executivePage = parent;
         this.selectedCompany = selectedCompany;
 
-        setSize(400, 400);
+        setSize(500, 600);
         setLocationRelativeTo(parent);
-        setLayout(new GridLayout(8, 2, 10, 5)); // Fields + Save button
+        setLayout(new BorderLayout());
+
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 10, 20));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
 
         // Input Fields
-        idField = new JTextField();
-        nameField = new JTextField();
-        deptField = new JTextField();
-        bankField = new JTextField();
-        basicPayField = new JTextField();
-        allowanceField = new JTextField();
+        idField = new JTextField(20);
+        nameField = new JTextField(20);
+        deptField = new JTextField(20);
+        bankField = new JTextField(20);
+        basicPayField = new JTextField(20);
+        allowanceField = new JTextField(20);
+        sssNumberField = new JTextField(20);
+        sssValueField = new JTextField(20);
+        pagibigNumberField = new JTextField(20);
+        tinNumberField = new JTextField(20);
+        philhealthNumberField = new JTextField(20);
 
-        // Labels and Fields
-        add(new JLabel("ID No:")); add(idField);
-        add(new JLabel("Name:")); add(nameField);
-        add(new JLabel("Department/Position:")); add(deptField);
-        add(new JLabel("Bank:")); add(bankField);
-        add(new JLabel("Basic Pay:")); add(basicPayField);
-        add(new JLabel("Allowance:")); add(allowanceField);
+        // Add Fields to formPanel
+        addRow(formPanel, gbc, "ID No:", idField);
+        addRow(formPanel, gbc, "Name:", nameField);
+        addRow(formPanel, gbc, "Department/Position:", deptField);
+        addRow(formPanel, gbc, "Bank:", bankField);
+        addRow(formPanel, gbc, "Basic Pay:", basicPayField);
+        addRow(formPanel, gbc, "Allowance:", allowanceField);
+        addRow(formPanel, gbc, "SSS Number:", sssNumberField);
+        addRow(formPanel, gbc, "SSS Value:", sssValueField);
+        addRow(formPanel, gbc, "Pag-IBIG Number:", pagibigNumberField);
+        addRow(formPanel, gbc, "TIN Number:", tinNumberField);
+        addRow(formPanel, gbc, "PhilHealth Number:", philhealthNumberField);
 
         // Save Button
         JButton saveBtn = new JButton("Save");
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel.add(saveBtn);
+
         saveBtn.addActionListener(e -> {
             try {
                 if (validateInput()) {
@@ -51,45 +75,58 @@ public class AddExecutiveForm extends JDialog {
                         saveExecutiveToDatabase();
                     }
 
-                    executivePage.loadExecutives(); // Refresh Combo & Table
-
-                    // Auto-select the executive
+                    executivePage.loadExecutives();
                     String entry = idField.getText() + " - " + nameField.getText();
                     executivePage.getExecutiveFilterCombo().setSelectedItem(entry);
-
-                    dispose(); // Close the dialog
+                    dispose();
                 }
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage());
             }
         });
 
-        add(new JLabel()); // Empty cell
-        add(saveBtn);
+        add(formPanel, BorderLayout.CENTER);
+        add(buttonPanel, BorderLayout.SOUTH);
     }
 
-    // Constructor for editing an executive
+    private void addRow(JPanel panel, GridBagConstraints gbc, String labelText, JTextField textField) {
+        gbc.gridx = 0;
+        panel.add(new JLabel(labelText), gbc);
+        gbc.gridx = 1;
+        panel.add(textField, gbc);
+        gbc.gridy++;
+    }
+
     public AddExecutiveForm(ExecutivePage parent, String selectedCompany,
-                            String execId, String name, String dept, String bank,
-                            double basicPay, double allowance) {
-        this(parent, selectedCompany); // Call main constructor
+                          String execId, String name, String dept, String bank,
+                          double basicPay, double allowance,
+                          String sssNumber, double sssValue,
+                          String pagibigNumber, String tinNumber, String philhealthNumber) {
+        this(parent, selectedCompany);
         isEditMode = true;
         setTitle("Edit Executive");
 
         idField.setText(execId);
-        idField.setEditable(false); // Prevent editing ID during update
+        idField.setEditable(false);
         nameField.setText(name);
         deptField.setText(dept);
         bankField.setText(bank);
         basicPayField.setText(String.valueOf(basicPay));
         allowanceField.setText(String.valueOf(allowance));
+        sssNumberField.setText(sssNumber);
+        sssValueField.setText(String.valueOf(sssValue));
+        pagibigNumberField.setText(pagibigNumber);
+        tinNumberField.setText(tinNumber);
+        philhealthNumberField.setText(philhealthNumber);
     }
 
-    // Input Validation
     private boolean validateInput() {
         if (idField.getText().isEmpty() || nameField.getText().isEmpty() ||
             deptField.getText().isEmpty() || bankField.getText().isEmpty() ||
-            basicPayField.getText().isEmpty() || allowanceField.getText().isEmpty()) {
+            basicPayField.getText().isEmpty() || allowanceField.getText().isEmpty() ||
+            sssNumberField.getText().isEmpty() || sssValueField.getText().isEmpty() ||
+            pagibigNumberField.getText().isEmpty() ||
+            tinNumberField.getText().isEmpty() || philhealthNumberField.getText().isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please fill in all fields.");
             return false;
         }
@@ -97,15 +134,15 @@ public class AddExecutiveForm extends JDialog {
         try {
             Double.parseDouble(basicPayField.getText());
             Double.parseDouble(allowanceField.getText());
+            Double.parseDouble(sssValueField.getText());
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Basic Pay and Allowance must be numbers.");
+            JOptionPane.showMessageDialog(this, "Basic Pay, Allowance, and SSS Value must be numbers.");
             return false;
         }
 
         return true;
     }
 
-    // Save new executive
     private void saveExecutiveToDatabase() throws SQLException {
         String execId = idField.getText().trim();
         String name = nameField.getText().trim();
@@ -116,13 +153,15 @@ public class AddExecutiveForm extends JDialog {
         LocalDate today = LocalDate.now();
 
         try (Connection conn = DBUtil.getConnection()) {
-            conn.setAutoCommit(false); // Begin transaction
+            conn.setAutoCommit(false);
 
             String insertExecSql = """
                 INSERT INTO executive_info (
-                    exec_id, name, department_or_position, bank,
-                    basic_pay, allowance, company
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    exec_id, name, department_or_position, bank, 
+                    basic_pay, allowance, company,
+                    sss_number, sss_value,
+                    pagibig_number, tin_number, philhealth_number
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
             PreparedStatement execStmt = conn.prepareStatement(insertExecSql);
@@ -133,9 +172,14 @@ public class AddExecutiveForm extends JDialog {
             execStmt.setDouble(5, basicPay);
             execStmt.setDouble(6, allowance);
             execStmt.setString(7, selectedCompany);
+            execStmt.setString(8, sssNumberField.getText().trim());
+            execStmt.setDouble(9, Double.parseDouble(sssValueField.getText().trim()));
+            execStmt.setString(10, pagibigNumberField.getText().trim());
+            execStmt.setString(11, tinNumberField.getText().trim());
+            execStmt.setString(12, philhealthNumberField.getText().trim());
+
             execStmt.executeUpdate();
 
-            // Optional: Add today's attendance
             String insertAttendanceSQL = """
                 INSERT INTO executive_attendance (exec_id, attendance_date)
                 VALUES (?, ?)
@@ -152,7 +196,6 @@ public class AddExecutiveForm extends JDialog {
         }
     }
 
-    // Update existing executive
     private void updateExecutiveInDatabase() throws SQLException {
         String execId = idField.getText().trim();
         String name = nameField.getText().trim();
@@ -160,12 +203,19 @@ public class AddExecutiveForm extends JDialog {
         String bank = bankField.getText().trim();
         double basicPay = Double.parseDouble(basicPayField.getText().trim());
         double allowance = Double.parseDouble(allowanceField.getText().trim());
+        String sssNumber = sssNumberField.getText().trim();
+        double sssValue = Double.parseDouble(sssValueField.getText().trim());
+        String pagibigNumber = pagibigNumberField.getText().trim();
+        String tinNumber = tinNumberField.getText().trim();
+        String philhealthNumber = philhealthNumberField.getText().trim();
 
         try (Connection conn = DBUtil.getConnection()) {
             String updateSql = """
                 UPDATE executive_info SET
                     name = ?, department_or_position = ?, bank = ?,
-                    basic_pay = ?, allowance = ?
+                    basic_pay = ?, allowance = ?,
+                    sss_number = ?, sss_value = ?, pagibig_number = ?,
+                    tin_number = ?, philhealth_number = ?
                 WHERE exec_id = ?
             """;
 
@@ -175,7 +225,13 @@ public class AddExecutiveForm extends JDialog {
             stmt.setString(3, bank);
             stmt.setDouble(4, basicPay);
             stmt.setDouble(5, allowance);
-            stmt.setString(6, execId);
+            stmt.setString(6, sssNumber);
+            stmt.setDouble(7, sssValue);
+            stmt.setString(8, pagibigNumber);
+            stmt.setString(9, tinNumber);
+            stmt.setString(10, philhealthNumber);
+            stmt.setString(11, execId);
+
             stmt.executeUpdate();
         }
     }
