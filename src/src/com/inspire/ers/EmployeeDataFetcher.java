@@ -44,7 +44,7 @@ public class EmployeeDataFetcher {
                     "", rs.getString("total_absent"),
                     rs.getString("ot_hours"),
                     rs.getString("ot_pay"),
-                    rs.getString("monthly_salary"),
+                    rs.getString("adjusted_salary"),
                     rs.getString("number_of_days"),
                     rs.getString("daily"),
                     rs.getString("per_hour"),
@@ -103,6 +103,9 @@ public class EmployeeDataFetcher {
         if (rs.next()) {
             adjustedSalary = rs.getBigDecimal("adjusted_salary");
         }
+        System.out.println("Fetching adjusted salary for ID: " + idNumber + " on " + payDate);
+        System.out.println("Result: " + adjustedSalary);
+
     } catch (SQLException e) {
         e.printStackTrace();
     }
