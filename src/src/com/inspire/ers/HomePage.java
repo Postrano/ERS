@@ -104,9 +104,10 @@ public class HomePage extends JFrame {
 
         // Button Listeners
         executiveBtn.addActionListener(e -> {
-            ExecutivePage executivePage = new ExecutivePage();
+            ExecutivePage executivePage = new ExecutivePage(selectedCompany);
             executivePage.setVisible(true);
         });
+
 
         addEmployeeBtn.addActionListener(e -> {
           EmployeeForm employeeForm = EmployeeForm.createForNewEmployee(this, selectedCompany);

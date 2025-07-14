@@ -7,13 +7,17 @@ import java.sql.*;
 import src.com.inspire.ers.DBUtil;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
+import com.inspire.ers.PdfShiftConverter;
 
 public class ExecutivePayrollPage extends JFrame {
     private JTable payrollTable;
     private DefaultTableModel tableModel;
     private JSpinner payDateSpinner, startDateSpinner, endDateSpinner;
+    private final String selectedCompany;
 
-    public ExecutivePayrollPage() {
+    public ExecutivePayrollPage(String selectedCompany) {
+         this.selectedCompany = selectedCompany;
         setTitle("Executive Payroll Summary");
         setSize(1000, 600);
         setLocationRelativeTo(null);
@@ -70,6 +74,13 @@ public class ExecutivePayrollPage extends JFrame {
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         bottomPanel.add(saveBtn);
         add(bottomPanel, BorderLayout.SOUTH);
+        
+        
+        JButton htmlBtn = new JButton("Download Payslip (HTML)");
+htmlBtn.addActionListener(e -> downloadPayslip());
+bottomPanel.add(htmlBtn);
+
+
     }
 
     private JSpinner createDateSpinner() {
@@ -94,58 +105,62 @@ public class ExecutivePayrollPage extends JFrame {
         return count;
     }
 
-    private void loadPayrollData(java.sql.Date startDate, java.sql.Date endDate) {
-        tableModel.setRowCount(0);
-        int totalWorkingDays = countWeekdaysBetween(startDate, endDate);
+  private void loadPayrollData(java.sql.Date startDate, java.sql.Date endDate) {
+    tableModel.setRowCount(0);
+    int totalWorkingDays = countWeekdaysBetween(startDate, endDate);
 
-        String sql = "SELECT ei.exec_id, ei.name, ei.basic_pay, ei.allowance, " +
-                "ei.marketing_allowance, ei.executive_allowance, " +
-                "SUM(CASE WHEN ea.present = 'Present' THEN 1 ELSE 0 END) AS total_present, " +
-                "SUM(CASE WHEN ea.present = 'Absent' THEN 1 ELSE 0 END) AS total_absent " +
-                "FROM executive_info ei " +
-                "LEFT JOIN executive_attendance ea ON ei.exec_id = ea.exec_id " +
-                "AND ea.attendance_date BETWEEN ? AND ? " +
-                "GROUP BY ei.exec_id, ei.name, ei.basic_pay, ei.allowance, ei.marketing_allowance, ei.executive_allowance";
+    String sql = "SELECT ei.exec_id, ei.name, ei.basic_pay, ei.allowance, " +
+            "ei.marketing_allowance, ei.executive_allowance, " +
+            "SUM(CASE WHEN ea.present = 'Present' THEN 1 ELSE 0 END) AS total_present, " +
+            "SUM(CASE WHEN ea.present = 'Absent' THEN 1 ELSE 0 END) AS total_absent " +
+            "FROM executive_info ei " +
+            "LEFT JOIN executive_attendance ea ON ei.exec_id = ea.exec_id " +
+            "AND ea.attendance_date BETWEEN ? AND ? " +
+            "WHERE ei.company = ? " +  // <-- Filter by company
+            "GROUP BY ei.exec_id, ei.name, ei.basic_pay, ei.allowance, " +
+            "ei.marketing_allowance, ei.executive_allowance";
 
-        try (Connection conn = DBUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+    try (Connection conn = DBUtil.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setDate(1, startDate);
-            stmt.setDate(2, endDate);
+        stmt.setDate(1, startDate);
+        stmt.setDate(2, endDate);
+        stmt.setString(3, selectedCompany); // <-- Pass company filter
 
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                String execId = rs.getString("exec_id");
-                String name = rs.getString("name");
-                int totalPresent = rs.getInt("total_present");
-                int totalAbsent = rs.getInt("total_absent");
+        ResultSet rs = stmt.executeQuery();
+        while (rs.next()) {
+            String execId = rs.getString("exec_id");
+            String name = rs.getString("name");
+            int totalPresent = rs.getInt("total_present");
+            int totalAbsent = rs.getInt("total_absent");
 
-                double basicPay = rs.getDouble("basic_pay");
-                double allowance = rs.getDouble("allowance");
-                double marketing = rs.getDouble("marketing_allowance");
-                double executive = rs.getDouble("executive_allowance");
+            double basicPay = rs.getDouble("basic_pay");
+            double allowance = rs.getDouble("allowance");
+            double marketing = rs.getDouble("marketing_allowance");
+            double executive = rs.getDouble("executive_allowance");
 
-                double dailyRate = totalWorkingDays > 0 ? basicPay / totalWorkingDays : 0;
-                double totalBasicPay = (dailyRate * totalPresent) + allowance;
+            double dailyRate = totalWorkingDays > 0 ? basicPay / totalWorkingDays : 0;
+            double totalBasicPay = (dailyRate * totalPresent) + allowance;
 
-                tableModel.addRow(new Object[]{
-                        execId,
-                        name,
-                        totalPresent,
-                        totalAbsent,
-                        String.format("%.2f", basicPay),
-                        String.format("%.2f", allowance),
-                        String.format("%.2f", marketing),
-                        String.format("%.2f", executive),
-                        String.format("%.2f", totalBasicPay)
-                });
-            }
-
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error loading payroll: " + ex.getMessage());
-            ex.printStackTrace();
+            tableModel.addRow(new Object[]{
+                    execId,
+                    name,
+                    totalPresent,
+                    totalAbsent,
+                    String.format("%.2f", basicPay),
+                    String.format("%.2f", allowance),
+                    String.format("%.2f", marketing),
+                    String.format("%.2f", executive),
+                    String.format("%.2f", totalBasicPay)
+            });
         }
+
+    } catch (Exception ex) {
+        JOptionPane.showMessageDialog(this, "Error loading payroll: " + ex.getMessage());
+        ex.printStackTrace();
     }
+}
+
 
     private void saveChangesToDatabase() {
         String sql = "UPDATE executive_info SET allowance = ?, marketing_allowance = ?, executive_allowance = ? WHERE exec_id = ?";
@@ -186,7 +201,205 @@ public class ExecutivePayrollPage extends JFrame {
         }
     }
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new ExecutivePayrollPage().setVisible(true));
+  
+    
+    
+private void downloadPayslip() {
+    int selectedRow = payrollTable.getSelectedRow();
+    if (selectedRow == -1) {
+        JOptionPane.showMessageDialog(this, "Please select a row from the table.");
+        return;
     }
+
+    String name = tableModel.getValueAt(selectedRow, 1).toString();
+    String execId = tableModel.getValueAt(selectedRow, 0).toString();
+    String totalPresent = tableModel.getValueAt(selectedRow, 2).toString();
+    String totalAbsent = tableModel.getValueAt(selectedRow, 3).toString();
+    String basicPay = tableModel.getValueAt(selectedRow, 4).toString();
+    String allowance = tableModel.getValueAt(selectedRow, 5).toString();
+    String mktg = tableModel.getValueAt(selectedRow, 6).toString();
+    String execAllow = tableModel.getValueAt(selectedRow, 7).toString();
+    String totalBasicPay = tableModel.getValueAt(selectedRow, 8).toString();
+
+    String payDate = new SimpleDateFormat("MMMM dd, yyyy").format(payDateSpinner.getValue());
+    String payPeriod = new SimpleDateFormat("MMMM dd").format(startDateSpinner.getValue()) +
+                       " - " + new SimpleDateFormat("dd, yyyy").format(endDateSpinner.getValue());
+
+    // Build HTML string
+ String html = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Payslip</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px auto;
+            max-width: 800px;
+            padding: 20px;
+        }
+        .payslip {
+            border: 1px solid #000;
+            padding: 20px;
+        }
+        .header {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .info-row {
+            display: grid;
+            grid-template-columns: 200px auto;
+            margin-bottom: 10px;
+        }
+        .info-label {
+            font-weight: bold;
+        }
+        .id-number {
+            background-color: #e8f5e9;
+            padding: 2px 5px;
+        }
+        .bank-details {
+            color: red;
+        }
+        .main-table {
+            width: 100%%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .main-table th, .main-table td {
+            border: 1px solid #000;
+            padding: 8px;
+        }
+        .earnings-col { width: 40%%; }
+        .amount-col {
+            width: 10%%;
+            text-align: right;
+        }
+        .deductions-col { width: 40%%; }
+        .total-row { font-weight: bold; }
+        .signature-section {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 50px;
+        }
+        .signature-line {
+            border-top: 1px solid #000;
+            width: 250px;
+            text-align: center;
+            padding-top: 5px;
+        }
+        .red-text { color: red; }
+    </style>
+</head>
+<body>
+    <div class="payslip">
+        <div class="header">
+            <div>
+                <div class="info-row">
+                    <span class="info-label">Employee Name</span>
+                    <span>%s</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">ID No.</span>
+                    <span class="id-number">%s</span>
+                </div>
+            </div>
+            <div>
+                <div class="info-row">
+                    <span class="info-label">Pay Date</span>
+                    <span>%s</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Worked Days</span>
+                    <span>%s</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Pay Period</span>
+                    <span>%s</span>
+                </div>
+            </div>
+        </div>
+
+        <table class="main-table">
+            <tr>
+                <th class="earnings-col">Earnings</th>
+                <th class="amount-col">Amount</th>
+                <th class="deductions-col">Deductions</th>
+                <th class="amount-col">Amount</th>
+            </tr>
+            <tr>
+                <td>Basic Pay</td>
+                <td>%s</td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>Allowance</td>
+                <td>%s</td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>Executive Allowance</td>
+                <td>%s</td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>Mktng. Allowance/Transpo</td>
+                <td>%s</td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr class="total-row">
+                <td>Gross Earnings</td>
+                <td>%s</td>
+                <td>NET PAY</td>
+                <td>%s</td>
+            </tr>
+        </table>
+
+        <div class="signature-section">
+            <div class="signature-line">
+                <div>Employer Signature</div>
+            </div>
+            <div class="signature-line">
+                <div>Employee Signature</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+""".formatted(
+    name, execId,
+    payDate, totalPresent, payPeriod,
+    basicPay, allowance,
+    execAllow, mktg,
+    totalBasicPay, totalBasicPay
+);
+
+
+    // Convert HTML to PDF using PdfShift
+    String apiKey = "sk_dc48b1f99bb971396765c80111f7d78e9e5fa723"; // Replace with your actual API key
+    PdfShiftConverter converter = new PdfShiftConverter(apiKey);
+    converter.convertToPdfWithChooser(html);
+}
+
+
+//""".formatted(
+//    name, execId, departmentOrPosition, bank, // employee info
+//    payDate, totalWorkingDays, totalPresent, payPeriod, // header info
+//    basicPay, sss, allowance, pagibig, refreshment, philhealth, // earnings + deductions
+//    otPay, absentLabel, absentDeduction, execAllow, lateLabel, lateDeduction,
+//    mktg, usedLeaveLabel, usedLeaveAmount, usedLeaveNote, unusedLeaveLabel,
+//    unusedLeaveAmount, totalBasicPay, /* totalDeductions, */ totalBasicPay // net pay
+//);
+
+
+
+
 }
