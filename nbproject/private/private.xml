@@ -3,9 +3,28 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
+
             <file>file:/C:/Users/Jazmin/Desktop/JAVA%20DEV/ERS/src/src/com/inspire/ers/FinalPayrollPage.java</file>
             <file>file:/C:/Users/Jazmin/Desktop/JAVA%20DEV/ERS/src/src/com/inspire/ers/EmployeeDataFetcher.java</file>
             <file>file:/C:/Users/Jazmin/Desktop/JAVA%20DEV/ERS/src/src/com/inspire/ers/EmployeeDataUpdater.java</file>
+
+
+            <file>file:/C:/Users/Romel%20Postrano/Documents/NetBeansProjects/ers/src/src/com/inspire/ers/EmployeeDAO.java</file>
+            <file>file:/C:/Users/Romel%20Postrano/Documents/NetBeansProjects/ers/src/src/com/inspire/ers/EmployeeForm.java</file>
+<!--             <file>file:/C:/Users/Romel%20Postrano/Documents/NetBeansProjects/ers/src/src/com/inspire/ers/Login.java</file> -->
+            <file>file:/C:/Users/Romel%20Postrano/Documents/NetBeansProjects/ers/src/src/com/inspire/ers/Employee.java</file>
+<!--             <file>file:/C:/Users/Romel%20Postrano/Documents/NetBeansProjects/ers/src/src/com/inspire/ers/HomePage.java</file> -->
+            <file>file:/C:/Users/Romel%20Postrano/Documents/NetBeansProjects/ers/src/src/com/inspire/ers/AttendanceDAO.java</file>
+            <file>file:/C:/Users/Romel%20Postrano/Documents/NetBeansProjects/ers/src/src/com/inspire/ers/AddExecutiveForm.java</file>
+            <file>file:/C:/Users/Romel%20Postrano/Documents/NetBeansProjects/ers/src/src/com/inspire/ers/ExecutivePage.java</file>
+            <file>file:/C:/Users/Romel%20Postrano/Documents/NetBeansProjects/ers/src/src/com/inspire/ers/ExecutiveAllowancePage.java</file>
+            <file>file:/C:/Users/Romel%20Postrano/Documents/NetBeansProjects/ers/src/src/com/inspire/ers/ExecutivePayrollPage.java</file>
+            <file>file:/C:/Users/Romel%20Postrano/Documents/NetBeansProjects/ers/src/src/com/inspire/ers/PayrollPage.java</file>
+            <file>file:/C:/Users/Romel%20Postrano/Documents/NetBeansProjects/ers/src/src/com/inspire/ers/PdfShiftConverter.java</file>
+
+            <file>file:/C:/Users/Jazmin/Desktop/JAVA%20DEV/ERS/src/src/com/inspire/ers/HomePage.java</file>
+            <file>file:/C:/Users/Jazmin/Desktop/JAVA%20DEV/ERS/src/src/com/inspire/ers/Login.java</file>
+
         </group>
     </open-files>
 </project-private>

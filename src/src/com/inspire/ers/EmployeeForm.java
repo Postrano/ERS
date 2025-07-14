@@ -181,13 +181,7 @@ public class EmployeeForm extends JFrame {
             }
         });
 
-//        mainPanel.add(profilePanel);
-//        mainPanel.add(Box.createVerticalStrut(20));
-//        mainPanel.add(salaryPanel);
-//        mainPanel.add(Box.createVerticalStrut(20));
-//        mainPanel.add(benefitsPanel);
-//        mainPanel.add(Box.createVerticalStrut(20));
-//    
+  
         fieldsPanel.add(submitButton); // Add it to the fields panel instead of mainPanel
 
         mainPanel.add(imagePanelWrapper, BorderLayout.WEST);
