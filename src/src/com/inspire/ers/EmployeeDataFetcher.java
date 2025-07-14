@@ -9,15 +9,16 @@ import java.math.BigDecimal;
 public class EmployeeDataFetcher {
     
 
-    public static List<String[]> fetchEmployeeData(String monthFilter) {
+    public static List<String[]> fetchEmployeeData(String monthFilter, String selectedCompany) {
         List<String[]> employeeDataList = new ArrayList<>();
         try (Connection conn = DBUtil.getConnection()) {
             String payrollQuery = "SELECT p.*, e.last_name, e.first_name, e.position, e.basic_pay, " +
                     "e.exec_allowance, e.monthly_salary, e.bank_account " +
                     "FROM payroll p JOIN employees e ON p.id_number = e.id_number " +
-                    "WHERE e.is_removed = 0";
+                    "WHERE e.is_removed = 0 AND e.company = ?";
 
             PreparedStatement stmt = conn.prepareStatement(payrollQuery);
+            stmt.setString(1, selectedCompany);
             ResultSet rs = stmt.executeQuery();
 
             while (rs.next()) {

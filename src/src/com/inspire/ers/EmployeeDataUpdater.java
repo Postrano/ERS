@@ -11,7 +11,7 @@ import java.math.RoundingMode;
 
 public class EmployeeDataUpdater {
 
-    public static boolean insertPayrollOnly(String[] data) {
+    public static boolean insertPayrollOnly(String[] data, String selectedCompany) {
     try {
         Connection conn = DBUtil.getConnection();
 
@@ -34,13 +34,15 @@ public class EmployeeDataUpdater {
         adjustedBase = basicPay.add(execAllowance);
 
 
-        BigDecimal dailyRate = basicPay.divide(BigDecimal.valueOf(22), 2, RoundingMode.HALF_UP);
+        int numberOfDays = Integer.parseInt(data[17]);
+        BigDecimal dailyRate = basicPay.divide(BigDecimal.valueOf(numberOfDays), 2, RoundingMode.HALF_UP);
+
         BigDecimal perMinute = dailyRate.divide(BigDecimal.valueOf(480), 2, RoundingMode.HALF_UP);
         
         int halfDay = Integer.parseInt(data[11]);
         System.out.println("half_day value from UI: " + data[11]);
         BigDecimal halfDayRate = dailyRate.divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
-BigDecimal halfDayDeduction = halfDayRate.multiply(BigDecimal.valueOf(halfDay));
+        BigDecimal halfDayDeduction = halfDayRate.multiply(BigDecimal.valueOf(halfDay));
 
         int absent = Integer.parseInt(data[9]);
         int minsLate = Integer.parseInt(data[7]);
@@ -105,7 +107,7 @@ stmt.setBigDecimal(7, totalAbsentAmount); // total_absent (amount)
 }
 
 
-    public static boolean updateEmployeeData(String[] data) {
+    public static boolean updateEmployeeData(String[] data, String selectedCompany) {
     try {
         Connection conn = DBUtil.getConnection();
         String idNumber = data[0];
@@ -133,7 +135,9 @@ stmt.setBigDecimal(7, totalAbsentAmount); // total_absent (amount)
         BigDecimal basicPay = new BigDecimal(data[4]);
         BigDecimal execAllowance = new BigDecimal(data[5]);
         BigDecimal adjustedBase = basicPay.add(execAllowance);
-        BigDecimal dailyRate = basicPay.divide(BigDecimal.valueOf(22), 2, RoundingMode.HALF_UP);
+        int numberOfDays = Integer.parseInt(data[17]);
+        BigDecimal dailyRate = basicPay.divide(BigDecimal.valueOf(numberOfDays), 2, RoundingMode.HALF_UP);
+
         BigDecimal perMinute = dailyRate.divide(BigDecimal.valueOf(480), 2, RoundingMode.HALF_UP);
         
         int absent = Integer.parseInt(data[9]);
@@ -199,7 +203,7 @@ stmt.setBigDecimal(6, totalAbsentAmount); // total_absent (amount)
             return rowsUpdated > 0;
         } else {
             conn.close();
-            return insertPayrollOnly(data);
+            return insertPayrollOnly(data, selectedCompany);
         }
 
     } catch (Exception e) {

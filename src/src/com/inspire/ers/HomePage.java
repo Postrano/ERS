@@ -107,7 +107,7 @@ public class HomePage extends JFrame {
         });
         
         finalPayrollBtn.addActionListener(e -> {
-            FinalPayrollPage finalPayrollPage = new FinalPayrollPage();
+            FinalPayrollPage finalPayrollPage = new FinalPayrollPage(selectedCompany);
             finalPayrollPage.setVisible(true);
         });
 

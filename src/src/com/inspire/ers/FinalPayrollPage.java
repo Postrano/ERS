@@ -14,8 +14,10 @@ public class FinalPayrollPage extends JFrame {
 
     private JTable table;
     private DefaultTableModel model;
+    private final String selectedCompany;
 
-    public FinalPayrollPage() {
+    public FinalPayrollPage(String selectedCompany) {
+        this.selectedCompany = selectedCompany;
         setTitle("Final Payroll Page");
         setSize(1200, 600);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -190,7 +192,7 @@ model.addTableModelListener(e -> {
                 newRow[23] = cutoffEndStr;
 
                 model.addRow(newRow);
-                boolean inserted = EmployeeDataUpdater.insertPayrollOnly(newRow);
+                boolean inserted = EmployeeDataUpdater.insertPayrollOnly(newRow, selectedCompany);
                 if (!inserted) {
                     System.err.println("Payroll insert failed for: " + newRow[0]);
                 }
@@ -202,7 +204,7 @@ model.addTableModelListener(e -> {
 
     private void refreshTable(String monthFilter) {
         model.setRowCount(0);
-        List<String[]> employeeData = EmployeeDataFetcher.fetchEmployeeData(monthFilter);
+        List<String[]> employeeData = EmployeeDataFetcher.fetchEmployeeData(monthFilter, this.selectedCompany);
         for (String[] row : employeeData) {
             model.addRow(row);
         }
@@ -225,7 +227,7 @@ model.addTableModelListener(e -> {
         updatedData[i] = (value != null) ? value.toString().trim() : "";
     }
 
-    boolean success = EmployeeDataUpdater.updateEmployeeData(updatedData);
+    boolean success = EmployeeDataUpdater.updateEmployeeData(updatedData, selectedCompany);
     if (success) {
         JOptionPane.showMessageDialog(this, "Update successful.");
 
@@ -295,10 +297,5 @@ model.addTableModelListener(e -> {
     }
 }
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            FinalPayrollPage finalPayrollPage = new FinalPayrollPage();
-            finalPayrollPage.setVisible(true);
-        });
-    }
+
 }
