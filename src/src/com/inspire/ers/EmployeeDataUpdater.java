@@ -62,6 +62,7 @@ public class EmployeeDataUpdater {
                 .subtract(totalDeduction)
                 .subtract(refreshment)
                 .add(otPay);
+System.out.println("Saving adjusted salary for " + idNumber + " on " + data[21] + ": " + adjustedSalary);
 
         String sql = "INSERT INTO payroll (id_number, refreshment, mins, total_late, absent, half_day, " +
                 "total_absent, ot_hours, ot_pay, number_of_days, daily, per_hour, per_minute, " +
@@ -91,6 +92,8 @@ stmt.setBigDecimal(7, totalAbsentAmount); // total_absent (amount)
         stmt.setDate(15, java.sql.Date.valueOf(data[22])); // cutoff_start
         stmt.setDate(16, java.sql.Date.valueOf(data[23])); // cutoff_end
         stmt.setBigDecimal(17, adjustedSalary);            // adjusted_salary
+        
+        System.out.println("PAY DATE RECEIVED: " + data[21]);
 
         int rowsInserted = stmt.executeUpdate();
 
@@ -180,10 +183,11 @@ stmt.setBigDecimal(7, totalAbsentAmount); // total_absent (amount)
             stmt.setInt(4, absent);
             stmt.setInt(5, Integer.parseInt(data[11]));
             BigDecimal totalAbsentAmount = dailyRate.multiply(BigDecimal.valueOf(absent))
-    .add(halfDayRate.multiply(BigDecimal.valueOf(halfDay)))
-    .setScale(2, RoundingMode.HALF_UP);
+            .add(halfDayRate.multiply(BigDecimal.valueOf(halfDay)))
+            .setScale(2, RoundingMode.HALF_UP);
+            System.out.println("Saving adjusted salary for " + idNumber + " on " + data[21] + ": " + adjustedSalary);
 
-stmt.setBigDecimal(6, totalAbsentAmount); // total_absent (amount)
+            stmt.setBigDecimal(6, totalAbsentAmount); // total_absent (amount)
 
             stmt.setBigDecimal(7, new BigDecimal(data[14]));
             stmt.setBigDecimal(8, otPay);
@@ -196,6 +200,8 @@ stmt.setBigDecimal(6, totalAbsentAmount); // total_absent (amount)
             stmt.setBigDecimal(15, adjustedSalary);
             stmt.setString(16, idNumber);
             stmt.setDate(17, java.sql.Date.valueOf(data[21]));
+            System.out.println("PAY DATE RECEIVED: " + data[21]);
+
 
             int rowsUpdated = stmt.executeUpdate();
             stmt.close();

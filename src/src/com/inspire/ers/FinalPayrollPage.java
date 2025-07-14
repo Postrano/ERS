@@ -10,6 +10,10 @@ import java.util.List;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
 public class FinalPayrollPage extends JFrame {
 
     private JTable table;
@@ -63,8 +67,8 @@ public class FinalPayrollPage extends JFrame {
         int[] columnWidths = {
             100, 150, 180, 100,
             100, 100, 100, 60,
-            100, 80, 40, 80,
-            40, 100, 80, 80,
+            100, 80, 100, 80,
+            100, 100, 80, 80,
             100, 130, 80,
             90, 100,
             100, 100, 100
@@ -82,7 +86,7 @@ public class FinalPayrollPage extends JFrame {
          applyColumnColoring();
          
          // Listen to OT HOURS column changes and update OT PAY automatically
-model.addTableModelListener(e -> {
+    model.addTableModelListener(e -> {
     int row = e.getFirstRow();
     int column = e.getColumn();
 
@@ -135,72 +139,436 @@ model.addTableModelListener(e -> {
         saveButton.addActionListener(this::handleSaveChanges);
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         bottomPanel.add(saveButton);
+        
+        JButton downloadPayslipButton = new JButton("Download Payslip");
+        downloadPayslipButton.addActionListener(e -> handleDownloadPayslip());
+        bottomPanel.add(downloadPayslipButton);
+        
         add(bottomPanel, BorderLayout.SOUTH);
     }
 
+private void handleDownloadPayslip() {
+
+    int selectedRow = table.getSelectedRow();
+
+    if (selectedRow == -1) {
+
+        JOptionPane.showMessageDialog(this, "Please select a row.");
+
+        return;
+
+    }
+ 
+    // Fetching fields from the selected row
+
+    String execId = model.getValueAt(selectedRow, 0).toString();       // ID No.
+
+    String name = model.getValueAt(selectedRow, 1).toString();         // Name
+
+    String dept = model.getValueAt(selectedRow, 2).toString();         // Department
+
+    String bank = model.getValueAt(selectedRow, 3).toString();         // Bank Info
+
+    String basicPay = model.getValueAt(selectedRow, 4).toString();     // Basic Pay
+
+    String allowance = model.getValueAt(selectedRow, 5).toString();    // Allowance
+
+    String execAllow = model.getValueAt(selectedRow, 6).toString();    // Executive Allowance
+
+    String mktg = model.getValueAt(selectedRow, 7).toString();         // Marketing Allowance
+
+    String workedDays = model.getValueAt(selectedRow, 17).toString();   // Number of Days (Worked Days)
+
+    String absent = model.getValueAt(selectedRow, 9).toString();       // Absent Deduction
+
+    String netPayFromTable = model.getValueAt(selectedRow, 16).toString(); // Net Pay (used as GROSS PAY here)
+
+    String cutoffStartStr = model.getValueAt(selectedRow, 22).toString();  // Cutoff Start
+
+    String cutoffEndStr = model.getValueAt(selectedRow, 23).toString();    // Cutoff End
+
+    String payDate = model.getValueAt(selectedRow, 21).toString();     // Pay Date
+
+    String payPeriod = cutoffStartStr + " - " + cutoffEndStr;          // Cutoff Range
+ 
+    // Compute corrected NET PAY (Basic + Allowance)
+
+    double basic = Double.parseDouble(basicPay);
+
+    double allow = Double.parseDouble(allowance);
+
+    String computedNetPay = String.format("%.2f", basic + allow);
+ 
+    // Generate HTML
+
+    String html = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Employee Payslip</title>
+<style>
+
+                body {
+
+                    font-family: Arial, sans-serif;
+
+                    margin: 40px auto;
+
+                    max-width: 800px;
+
+                    padding: 20px;
+
+                }
+
+                .payslip {
+
+                    border: 1px solid #000;
+
+                    padding: 20px;
+
+                }
+
+                .header {
+
+                    display: grid;
+
+                    grid-template-columns: 1fr 1fr;
+
+                    gap: 20px;
+
+                    margin-bottom: 20px;
+
+                }
+
+                .info-row {
+
+                    display: grid;
+
+                    grid-template-columns: 200px auto;
+
+                    margin-bottom: 10px;
+
+                }
+
+                .info-label {
+
+                    font-weight: bold;
+
+                }
+
+                .id-number {
+
+                    background-color: #e8f5e9;
+
+                    padding: 2px 5px;
+
+                }
+
+                .main-table {
+
+                    width: 100%%;
+
+                    border-collapse: collapse;
+
+                    margin: 20px 0;
+
+                }
+
+                .main-table th, .main-table td {
+
+                    border: 1px solid #000;
+
+                    padding: 8px;
+
+                }
+
+                .earnings-col { width: 40%%; }
+
+                .amount-col {
+
+                    width: 10%%;
+
+                    text-align: right;
+
+                }
+
+                .deductions-col { width: 40%%; }
+
+                .total-row { font-weight: bold; }
+
+                .signature-section {
+
+                    display: flex;
+
+                    justify-content: space-between;
+
+                    margin-top: 50px;
+
+                }
+
+                .signature-line {
+
+                    border-top: 1px solid #000;
+
+                    width: 250px;
+
+                    text-align: center;
+
+                    padding-top: 5px;
+
+                }
+</style>
+</head>
+<body>
+<div class="payslip">
+<div class="header">
+<div>
+<div class="info-row">
+<span class="info-label">Employee Name</span>
+<span>%s</span>
+</div>
+<div class="info-row">
+<span class="info-label">ID No.</span>
+<span class="id-number">%s</span>
+</div>
+</div>
+<div>
+<div class="info-row">
+<span class="info-label">Pay Date</span>
+<span>%s</span>
+</div>
+<div class="info-row">
+<span class="info-label">Worked Days</span>
+<span>%s</span>
+</div>
+<div class="info-row">
+<span class="info-label">Pay Period</span>
+<span>%s</span>
+</div>
+</div>
+</div>
+ 
+                <table class="main-table">
+<tr>
+<th class="earnings-col">Earnings</th>
+<th class="amount-col">Amount</th>
+<th class="deductions-col">Deductions</th>
+<th class="amount-col">Amount</th>
+</tr>
+<tr>
+<td>Basic Pay</td>
+<td>%s</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Allowance</td>
+<td>%s</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Executive Allowance</td>
+<td>%s</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Mktng. Allowance/Transpo</td>
+<td>%s</td>
+<td>Absent</td>
+<td>%s</td>
+</tr>
+<tr class="total-row">
+<td>NET PAY</td>
+<td>%s</td>
+<td>GROSS PAY</td>
+<td>%s</td>
+</tr>
+</table>
+ 
+                <div class="signature-section">
+<div class="signature-line">
+<div>Employer Signature</div>
+</div>
+<div class="signature-line">
+<div>Employee Signature</div>
+</div>
+</div>
+</div>
+</body>
+</html>
+
+        """.formatted(
+
+        name, execId,
+
+        payDate, workedDays, payPeriod,
+
+        basicPay, allowance, execAllow, mktg, absent,
+
+        computedNetPay, netPayFromTable
+
+    );
+ 
+    // Generate the PDF using PdfShiftConverter
+
+    try {
+
+        PdfShiftConverter converter = new PdfShiftConverter("sk_dc48b1f99bb971396765c80111f7d78e9e5fa723");
+
+        converter.convertToPdfWithChooser(html);
+
+    } catch (Exception e) {
+
+        e.printStackTrace();
+
+        JOptionPane.showMessageDialog(this, "Failed to generate payslip: " + e.getMessage());
+
+    }
+
+}
+ 
+ 
+ 
+private int countWeekdaysBetween(String start, String end) {
+
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+    LocalDate startDate = LocalDate.parse(start, formatter);
+
+    LocalDate endDate = LocalDate.parse(end, formatter);
+ 
+    int weekdays = 0;
+
+    while (!startDate.isAfter(endDate)) {
+
+        DayOfWeek day = startDate.getDayOfWeek();
+
+        if (day != DayOfWeek.SATURDAY && day != DayOfWeek.SUNDAY) {
+
+            weekdays++;
+
+        }
+
+        startDate = startDate.plusDays(1);
+
+    }
+
+    return weekdays;
+
+}
+
+ 
+    
     private void openAddPayrollDialog() {
-        JTextField payDateField = new JTextField("2025-08-31");
-        JTextField cutoffStart = new JTextField();
-        JTextField cutoffEnd = new JTextField();
+    JTextField payDateField = new JTextField("2025-08-31");
+    JTextField cutoffStart = new JTextField();
+    JTextField cutoffEnd = new JTextField();
 
-        JPanel panel = new JPanel(new GridLayout(0, 1));
-        panel.add(new JLabel("Pay Date (YYYY-MM-DD):"));
-        panel.add(payDateField);
-        panel.add(new JLabel("Cutoff Start:"));
-        panel.add(cutoffStart);
-        panel.add(new JLabel("Cutoff End:"));
-        panel.add(cutoffEnd);
+    // Create working days options
+    JRadioButton option21 = new JRadioButton("21 days");
+    JRadioButton option22 = new JRadioButton("22 days");
+    JRadioButton optionOther = new JRadioButton("Other:");
+    JTextField otherField = new JTextField();
+    otherField.setEnabled(false);
 
-        int result = JOptionPane.showConfirmDialog(this, panel, "Add Payroll for ALL Employees", JOptionPane.OK_CANCEL_OPTION);
-        if (result == JOptionPane.OK_OPTION) {
-            String payDate = payDateField.getText().trim();
-            String cutoffStartStr = cutoffStart.getText().trim();
-            String cutoffEndStr = cutoffEnd.getText().trim();
+    // Group radio buttons
+    ButtonGroup group = new ButtonGroup();
+    group.add(option21);
+    group.add(option22);
+    group.add(optionOther);
 
-            if (payDate.isEmpty() || cutoffStartStr.isEmpty() || cutoffEndStr.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Please fill in all fields.");
+    option22.setSelected(true); // Default selection
+
+    // Enable/disable the custom text field
+    optionOther.addActionListener(e -> otherField.setEnabled(true));
+    option21.addActionListener(e -> otherField.setEnabled(false));
+    option22.addActionListener(e -> otherField.setEnabled(false));
+
+    JPanel panel = new JPanel(new GridLayout(0, 1));
+    panel.add(new JLabel("Pay Date (YYYY-MM-DD):"));
+    panel.add(payDateField);
+    panel.add(new JLabel("Cutoff Start:"));
+    panel.add(cutoffStart);
+    panel.add(new JLabel("Cutoff End:"));
+    panel.add(cutoffEnd);
+
+    panel.add(new JLabel("Number of Working Days:"));
+    panel.add(option21);
+    panel.add(option22);
+    JPanel otherPanel = new JPanel(new BorderLayout());
+    otherPanel.add(optionOther, BorderLayout.WEST);
+    otherPanel.add(otherField, BorderLayout.CENTER);
+    panel.add(otherPanel);
+
+    int result = JOptionPane.showConfirmDialog(this, panel, "Add Payroll for ALL Employees", JOptionPane.OK_CANCEL_OPTION);
+    if (result == JOptionPane.OK_OPTION) {
+        String payDate = payDateField.getText().trim();
+        String cutoffStartStr = cutoffStart.getText().trim();
+        String cutoffEndStr = cutoffEnd.getText().trim();
+
+        if (payDate.isEmpty() || cutoffStartStr.isEmpty() || cutoffEndStr.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please fill in all fields.");
+            return;
+        }
+
+        int numberOfDays = 22; // default
+        if (option21.isSelected()) {
+            numberOfDays = 21;
+        } else if (option22.isSelected()) {
+            numberOfDays = 22;
+        } else if (optionOther.isSelected()) {
+            try {
+                numberOfDays = Integer.parseInt(otherField.getText().trim());
+                if (numberOfDays <= 0) throw new NumberFormatException();
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Please enter a valid number of working days.");
                 return;
             }
-
-            List<String[]> employees = EmployeeDataFetcher.fetchAllEmployeesOnly();
-
-            for (String[] emp : employees) {
-                String[] newRow = new String[24];
-                newRow[0] = emp[0]; // ID
-                newRow[1] = emp[1]; // Name
-                newRow[2] = emp[2]; // Dept/Position
-                newRow[3] = emp[3]; // Bank
-                newRow[4] = emp[4]; // Basic Pay
-                newRow[5] = emp[5]; // Allowance
-                newRow[6] = "0";
-                newRow[7] = "0";
-                newRow[8] = "0";
-                newRow[9] = "0";
-                newRow[10] = "";
-                newRow[11] = "0";
-                newRow[12] = "";
-                newRow[13] = "0";
-                newRow[14] = "0";
-                newRow[15] = "0";
-                newRow[16] = emp[6]; // Monthly Salary
-                newRow[17] = "0";
-                newRow[18] = "0";
-                newRow[19] = "0";
-                newRow[20] = "0";
-                newRow[21] = payDate;
-                newRow[22] = cutoffStartStr;
-                newRow[23] = cutoffEndStr;
-
-                model.addRow(newRow);
-                boolean inserted = EmployeeDataUpdater.insertPayrollOnly(newRow, selectedCompany);
-                if (!inserted) {
-                    System.err.println("Payroll insert failed for: " + newRow[0]);
-                }
-            }
-
-            JOptionPane.showMessageDialog(this, "Payroll entries for " + payDate + " added.");
         }
+
+        List<String[]> employees = EmployeeDataFetcher.fetchAllEmployeesOnly();
+
+        for (String[] emp : employees) {
+            String[] newRow = new String[24];
+            newRow[0] = emp[0]; // ID
+            newRow[1] = emp[1]; // Name
+            newRow[2] = emp[2]; // Dept/Position
+            newRow[3] = emp[3]; // Bank
+            newRow[4] = emp[4]; // Basic Pay
+            newRow[5] = emp[5]; // Allowance
+            newRow[6] = "0";    // Refreshment
+            newRow[7] = "0";    // Mins
+            newRow[8] = "0";    // Total Late
+            newRow[9] = "0";    // Absent
+            newRow[10] = newRow[9];    // Spacer
+            newRow[11] = "0";   // Half Day
+            newRow[12] = newRow[11];    // Spacer
+            newRow[13] = "0";   // Total Absent
+            newRow[14] = "0";   // OT Hours
+            newRow[15] = "0";   // OT Pay
+            newRow[16] = emp[6]; // Monthly Salary
+            newRow[17] = String.valueOf(numberOfDays); // ✅ Number of Days
+            newRow[18] = "0";   // Daily
+            newRow[19] = "0";   // Per Hour
+            newRow[20] = "0";   // Per Minute
+            newRow[21] = payDate;
+            newRow[22] = cutoffStartStr;
+            newRow[23] = cutoffEndStr;
+
+            model.addRow(newRow);
+            boolean inserted = EmployeeDataUpdater.insertPayrollOnly(newRow, selectedCompany);
+            if (!inserted) {
+                System.err.println("Payroll insert failed for: " + newRow[0]);
+            }
+        }
+
+        JOptionPane.showMessageDialog(this, "Payroll entries for " + payDate + " added.");
     }
+}
 
     private void refreshTable(String monthFilter) {
         model.setRowCount(0);
@@ -208,10 +576,32 @@ model.addTableModelListener(e -> {
         for (String[] row : employeeData) {
             model.addRow(row);
         }
+        // Auto-fill the blank columns
+        for (int i = 0; i < model.getRowCount(); i++) {
+    try {
+        BigDecimal dailyRate = new BigDecimal(model.getValueAt(i, 18).toString()); // assuming col 18 = daily
+        int absent = Integer.parseInt(model.getValueAt(i, 9).toString());
+        int halfDay = Integer.parseInt(model.getValueAt(i, 11).toString());
+
+        BigDecimal absentAmount = dailyRate.multiply(BigDecimal.valueOf(absent)).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal halfDayAmount = dailyRate.divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP)
+                                            .multiply(BigDecimal.valueOf(halfDay))
+                                            .setScale(2, RoundingMode.HALF_UP);
+
+        model.setValueAt(absentAmount.toString(), i, 10);  // Show computed absent value
+        model.setValueAt(halfDayAmount.toString(), i, 12); // Show computed half-day value
+
+    } catch (Exception e) {
+        e.printStackTrace(); // Fail silently for bad rows
+    }
+}
     }
 
    private void handleSaveChanges(ActionEvent e) {
     int selectedRow = table.getSelectedRow();
+    System.out.println("Testing");
+    
+    System.out.println("SelectedRow index: " + selectedRow + ", PayDate in row: " + table.getValueAt(selectedRow, 21));
     if (selectedRow == -1) {
         JOptionPane.showMessageDialog(this, "Please select a row to edit.");
         return;
@@ -236,9 +626,17 @@ model.addTableModelListener(e -> {
         try {
             String idNumber = updatedData[0];
             String payDate = updatedData[21];
+            
+            System.out.println("Updating salary for ID " + idNumber + " on PAY DATE " + payDate);
+            
+            System.out.println("Row selected: " + selectedRow);
+            System.out.println("ID: " + updatedData[0]);
+            System.out.println("PAY DATE: " + updatedData[21]);
 
-            BigDecimal adjustedSalary = EmployeeDataFetcher.fetchAdjustedSalary(idNumber, payDate);
+
+            BigDecimal adjustedSalary = EmployeeDataFetcher.fetchAdjustedSalary(idNumber, updatedData[21]);
             model.setValueAt(adjustedSalary.toPlainString(), selectedRow, 16); // NET PAY column
+            model.fireTableRowsUpdated(selectedRow, selectedRow);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Error fetching adjusted salary: " + ex.getMessage());
         }
@@ -295,7 +693,5 @@ model.addTableModelListener(e -> {
     for (int i = 0; i < table.getColumnCount(); i++) {
         table.getColumnModel().getColumn(i).setCellRenderer(customRenderer);
     }
-}
-
-
-}
+   }
+   }
