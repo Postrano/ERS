@@ -37,13 +37,13 @@ public class HomePage extends JFrame {
 
        
         // Welcome Message Panel (Centered at Top)
-JLabel welcomeLabel = new JLabel("Welcome to " + company.toUpperCase() + " Employees");
-welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
-welcomeLabel.setForeground(new Color(33, 37, 41));
+        JLabel welcomeLabel = new JLabel("Welcome to " + company.toUpperCase() + " Employees");
+        welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        welcomeLabel.setForeground(new Color(33, 37, 41));
 
-JPanel welcomePanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 10));
-welcomePanel.setBackground(topPanel.getBackground());
-welcomePanel.add(welcomeLabel);
+        JPanel welcomePanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 10));
+        welcomePanel.setBackground(topPanel.getBackground());
+        welcomePanel.add(welcomeLabel);
 
         // Search Field
         JTextField searchField = new JTextField(20);
@@ -53,8 +53,10 @@ welcomePanel.add(welcomeLabel);
         // Buttons
         JButton executiveBtn = new JButton("EXECUTIVE");
         JButton addEmployeeBtn = new JButton("ADD EMPLOYEE");
+        JButton finalPayrollBtn = new JButton("FINAL PAYROLL");
         executiveBtn.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         addEmployeeBtn.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        finalPayrollBtn.setFont(new Font("Segoe UI", Font.PLAIN, 14));
 
         // Employee Count
         employeeCountLabel = new JLabel("#Employee: 0");
@@ -66,6 +68,7 @@ welcomePanel.add(welcomeLabel);
         leftPanel.setBackground(topPanel.getBackground());
         leftPanel.add(executiveBtn);
         leftPanel.add(addEmployeeBtn);
+        leftPanel.add(finalPayrollBtn);
 
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         rightPanel.setBackground(topPanel.getBackground());
@@ -100,6 +103,11 @@ welcomePanel.add(welcomeLabel);
         addEmployeeBtn.addActionListener(e -> {
             EmployeeForm employeeForm = EmployeeForm.createForNewEmployee(this, selectedCompany);
             employeeForm.setVisible(true);
+        });
+        
+        finalPayrollBtn.addActionListener(e -> {
+            FinalPayrollPage finalPayrollPage = new FinalPayrollPage();
+            finalPayrollPage.setVisible(true);
         });
 
         searchField.addKeyListener(new KeyAdapter() {
