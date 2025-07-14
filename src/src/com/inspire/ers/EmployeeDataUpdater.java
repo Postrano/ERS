@@ -28,10 +28,10 @@ public class EmployeeDataUpdater {
         BigDecimal adjustedBase;
 
         if (rs.next()) {
-    basicPay = rs.getBigDecimal("basic_pay");
-    execAllowance = rs.getBigDecimal("exec_allowance");
-}
-adjustedBase = basicPay.add(execAllowance);
+            basicPay = rs.getBigDecimal("basic_pay");
+            execAllowance = rs.getBigDecimal("exec_allowance");
+        }
+        adjustedBase = basicPay.add(execAllowance);
 
 
         BigDecimal dailyRate = basicPay.divide(BigDecimal.valueOf(22), 2, RoundingMode.HALF_UP);
@@ -44,7 +44,13 @@ BigDecimal halfDayDeduction = halfDayRate.multiply(BigDecimal.valueOf(halfDay));
 
         int absent = Integer.parseInt(data[9]);
         int minsLate = Integer.parseInt(data[7]);
-        BigDecimal otPay = new BigDecimal(data[15]);
+        
+        BigDecimal totalLate = perMinute.multiply(BigDecimal.valueOf(minsLate)).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal otRate = new BigDecimal("128.85");
+        BigDecimal otHours = new BigDecimal(data[14]);
+        BigDecimal otPay = otHours.multiply(otRate);
+
+        BigDecimal refreshment = new BigDecimal(data[6]);
 
         BigDecimal totalDeduction = dailyRate.multiply(BigDecimal.valueOf(absent))
             .add(perMinute.multiply(BigDecimal.valueOf(minsLate)))
@@ -52,6 +58,7 @@ BigDecimal halfDayDeduction = halfDayRate.multiply(BigDecimal.valueOf(halfDay));
 
         BigDecimal adjustedSalary = adjustedBase
                 .subtract(totalDeduction)
+                .subtract(refreshment)
                 .add(otPay);
 
         String sql = "INSERT INTO payroll (id_number, refreshment, mins, total_late, absent, half_day, " +
@@ -61,12 +68,17 @@ BigDecimal halfDayDeduction = halfDayRate.multiply(BigDecimal.valueOf(halfDay));
 
         PreparedStatement stmt = conn.prepareStatement(sql);
         stmt.setString(1, idNumber);
-        stmt.setBigDecimal(2, new BigDecimal(data[6]));  // refreshment
+        stmt.setBigDecimal(2, refreshment);  // refreshment
         stmt.setInt(3, minsLate);                         // mins
-        stmt.setBigDecimal(4, new BigDecimal(data[8]));  // total_late
+        stmt.setBigDecimal(4, totalLate); // total_late computed
         stmt.setInt(5, absent);                          // absent
         stmt.setInt(6, Integer.parseInt(data[11]));      // half_day
-        stmt.setInt(7, Integer.parseInt(data[13]));      // total_absent
+        BigDecimal totalAbsentAmount = dailyRate.multiply(BigDecimal.valueOf(absent))
+    .add(halfDayRate.multiply(BigDecimal.valueOf(halfDay)))
+    .setScale(2, RoundingMode.HALF_UP);
+
+stmt.setBigDecimal(7, totalAbsentAmount); // total_absent (amount)
+
         stmt.setBigDecimal(8, new BigDecimal(data[14])); // ot_hours
         stmt.setBigDecimal(9, otPay);                    // ot_pay
         stmt.setInt(10, Integer.parseInt(data[17]));     // number_of_days
@@ -129,11 +141,16 @@ BigDecimal halfDayDeduction = halfDayRate.multiply(BigDecimal.valueOf(halfDay));
         System.out.println("half_day value from UI: " + data[11]);
 
         int minsLate = Integer.parseInt(data[7]);
-        BigDecimal otPay = new BigDecimal(data[15]);
         
+        BigDecimal totalLate = perMinute.multiply(BigDecimal.valueOf(minsLate)).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal otRate = new BigDecimal("128.85");
+        BigDecimal otHours = new BigDecimal(data[14]);
+        BigDecimal otPay = otHours.multiply(otRate);
+
         // Half-day deduction is half the daily rate × number of half days
-BigDecimal halfDayRate = dailyRate.divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
-BigDecimal halfDayDeduction = halfDayRate.multiply(BigDecimal.valueOf(halfDay));
+        BigDecimal halfDayRate = dailyRate.divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
+        BigDecimal halfDayDeduction = halfDayRate.multiply(BigDecimal.valueOf(halfDay));
+        BigDecimal refreshment = new BigDecimal(data[6]);
 
         BigDecimal totalDeduction = dailyRate.multiply(BigDecimal.valueOf(absent))
                 .add(perMinute.multiply(BigDecimal.valueOf(minsLate)))
@@ -141,6 +158,7 @@ BigDecimal halfDayDeduction = halfDayRate.multiply(BigDecimal.valueOf(halfDay));
 
         BigDecimal adjustedSalary = adjustedBase
                 .subtract(totalDeduction)
+                .subtract(refreshment)
                 .add(otPay);
 
         if (exists) {
@@ -154,10 +172,15 @@ BigDecimal halfDayDeduction = halfDayRate.multiply(BigDecimal.valueOf(halfDay));
             PreparedStatement stmt = conn.prepareStatement(updateSql);
             stmt.setBigDecimal(1, new BigDecimal(data[6]));
             stmt.setInt(2, minsLate);
-            stmt.setBigDecimal(3, new BigDecimal(data[8]));
+            stmt.setBigDecimal(3, totalLate); // total_late computed
             stmt.setInt(4, absent);
             stmt.setInt(5, Integer.parseInt(data[11]));
-            stmt.setInt(6, Integer.parseInt(data[13]));
+            BigDecimal totalAbsentAmount = dailyRate.multiply(BigDecimal.valueOf(absent))
+    .add(halfDayRate.multiply(BigDecimal.valueOf(halfDay)))
+    .setScale(2, RoundingMode.HALF_UP);
+
+stmt.setBigDecimal(6, totalAbsentAmount); // total_absent (amount)
+
             stmt.setBigDecimal(7, new BigDecimal(data[14]));
             stmt.setBigDecimal(8, otPay);
             stmt.setInt(9, Integer.parseInt(data[17]));
@@ -183,5 +206,5 @@ BigDecimal halfDayDeduction = halfDayRate.multiply(BigDecimal.valueOf(halfDay));
         e.printStackTrace();
         return false;
     }
-}
+  }
 }

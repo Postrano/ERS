@@ -53,7 +53,7 @@ public class HomePage extends JFrame {
         // Buttons
         JButton executiveBtn = new JButton("EXECUTIVE");
         JButton addEmployeeBtn = new JButton("ADD EMPLOYEE");
-        JButton finalPayrollBtn = new JButton("FINAL PAYROLL");
+        JButton finalPayrollBtn = new JButton("PAYROLL");
         executiveBtn.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         addEmployeeBtn.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         finalPayrollBtn.setFont(new Font("Segoe UI", Font.PLAIN, 14));
