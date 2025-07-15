@@ -64,7 +64,7 @@ public class ExecutivePage extends JFrame {
 
        String[] executiveCols = {
             "ID No", "Name", "Department/Position", "Bank",
-            "Basic Pay", "Allowance", "SSS Number", "SSS Value",
+            "Basic Pay", "Allowance", "SSS Number", 
             "Pag-IBIG Number", "TIN Number", "PhilHealth Number"
         };
         executiveModel = new DefaultTableModel(executiveCols, 0);
@@ -177,7 +177,7 @@ public class ExecutivePage extends JFrame {
                 "₱" + String.format("%,.2f", rs.getDouble("basic_pay")),
                 "₱" + String.format("%,.2f", rs.getDouble("allowance")),
                 rs.getString("sss_number"),
-                "₱" + String.format("%,.2f", rs.getDouble("sss_value")),
+//                "₱" + String.format("%,.2f", rs.getDouble("sss_value")),
                 rs.getString("pagibig_number"),
                 rs.getString("tin_number"),
                 rs.getString("philhealth_number")
@@ -318,7 +318,7 @@ public class ExecutivePage extends JFrame {
                          rs.getDouble("basic_pay"),
                          rs.getDouble("allowance"),
                          rs.getString("sss_number"),
-                         rs.getDouble("sss_value"),
+//                         rs.getDouble("sss_value"),
                         
                          rs.getString("pagibig_number"),
                          rs.getString("tin_number"),
