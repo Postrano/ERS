@@ -50,7 +50,8 @@ public class FinalPayrollPage extends JFrame {
             " ", "TOTAL ABSENT", "OT HOURS", "OT PAY",
             "NET PAY", "NUMBER OF DAYS", "DAILY",
             "PER HOUR", "PER MINUTE",
-            "PAY DATE", "CUTOFF START", "CUTOFF END"
+            "PAY DATE", "CUTOFF START", "CUTOFF END",
+                "BENEFITS" // <- ADD THIS
         };
 
         model = new DefaultTableModel(columns, 0) {
@@ -71,11 +72,17 @@ public class FinalPayrollPage extends JFrame {
             100, 100, 80, 80,
             100, 130, 80,
             90, 100,
-            100, 100, 100
+            100, 100, 100,
+                100 // <- for "BENEFITS"
         };
         
         table = new JTable(model);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        
+        // Create "Benefits" button renderer and editor
+table.getColumn("BENEFITS").setCellRenderer(new ButtonRenderer());
+table.getColumn("BENEFITS").setCellEditor(new ButtonEditor(new JCheckBox()));
+
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         for (int i = 0; i < columnWidths.length; i++) {
@@ -147,291 +154,289 @@ public class FinalPayrollPage extends JFrame {
         add(bottomPanel, BorderLayout.SOUTH);
     }
 
-private void handleDownloadPayslip() {
+    class ButtonRenderer extends JButton implements javax.swing.table.TableCellRenderer {
+    public ButtonRenderer() {
+        setText("Benefits");
+    }
 
+    @Override
+    public Component getTableCellRendererComponent(JTable table, Object value,
+        boolean isSelected, boolean hasFocus, int row, int column) {
+        return this;
+    }
+}
+
+class ButtonEditor extends DefaultCellEditor {
+    private JButton button;
+    private String basicPay;
+    private boolean clicked;
+    private JTable table;
+
+    public ButtonEditor(JCheckBox checkBox) {
+        super(checkBox);
+        button = new JButton("Benefits");
+        button.addActionListener(e -> showBenefitsDialog());
+    }
+    
+    private boolean sssSelected = false;
+private boolean philHealthSelected = false;
+private boolean pagibigSelected = false;
+
+
+    private void showBenefitsDialog() {
+    int row = table.getSelectedRow();
+    if (row == -1) return;
+
+    String basicStr = table.getValueAt(row, 4).toString(); // BASIC PAY
+    double basic = Double.parseDouble(basicStr);
+
+    JCheckBox sssCheckbox = new JCheckBox();
+    JCheckBox philHealthCheckbox = new JCheckBox();
+    JCheckBox pagibigCheckbox = new JCheckBox();
+
+    // Restore previous selections
+    sssCheckbox.setSelected(sssSelected);
+    philHealthCheckbox.setSelected(philHealthSelected);
+    pagibigCheckbox.setSelected(pagibigSelected);
+
+    // Labels
+    JLabel sssEmpLabel = new JLabel("0.00");
+    JLabel sssEeLabel = new JLabel("0.00");
+    JLabel sssTotalLabel = new JLabel("0.00");
+
+    JLabel philEmpLabel = new JLabel("0.00");
+    JLabel philEeLabel = new JLabel("0.00");
+    JLabel philTotalLabel = new JLabel("0.00");
+
+    JLabel pagibigEmpLabel = new JLabel("0.00");
+    JLabel pagibigEeLabel = new JLabel("0.00");
+    JLabel pagibigTotalLabel = new JLabel("0.00");
+
+    JLabel totalContributionLabel = new JLabel("0.00");
+
+    // Compute function
+    Runnable compute = () -> {
+        // Save current states to fields
+        sssSelected = sssCheckbox.isSelected();
+        philHealthSelected = philHealthCheckbox.isSelected();
+        pagibigSelected = pagibigCheckbox.isSelected();
+
+        double sssEmp = 0, sssEe = 0, sssTotal = 0;
+        double philEmp = 0, philEe = 0, philTotal = 0;
+        double pagibigEmp = 0, pagibigEe = 0, pagibigTotal = 0;
+
+        if (sssSelected) {
+            sssTotal = basic * 0.15;
+            sssEmp = basic * 0.10;
+            sssEe = basic * 0.05;
+            if (basic <= 14000) {
+                sssEmp += 10;
+                sssTotal += 10;
+            } else if (basic >= 15000) {
+                sssEmp += 30;
+                sssTotal += 30;
+            }
+        }
+
+        if (philHealthSelected) {
+            philTotal = basic * 0.05;
+            philEmp = philTotal / 2;
+            philEe = philTotal / 2;
+        }
+
+        if (pagibigSelected) {
+            if (basic <= 1500) {
+                pagibigEmp = basic * 0.02;
+                pagibigEe = basic * 0.01;
+            } else if (basic >= 10000) {
+                pagibigEmp = basic * 0.02;
+                pagibigEe = basic * 0.02;
+            }
+            pagibigTotal = pagibigEmp + pagibigEe;
+        }
+
+        // Update labels
+        sssEmpLabel.setText(String.format("%.2f", sssEmp));
+        sssEeLabel.setText(String.format("%.2f", sssEe));
+        sssTotalLabel.setText(String.format("%.2f", sssTotal));
+
+        philEmpLabel.setText(String.format("%.2f", philEmp));
+        philEeLabel.setText(String.format("%.2f", philEe));
+        philTotalLabel.setText(String.format("%.2f", philTotal));
+
+        pagibigEmpLabel.setText(String.format("%.2f", pagibigEmp));
+        pagibigEeLabel.setText(String.format("%.2f", pagibigEe));
+        pagibigTotalLabel.setText(String.format("%.2f", pagibigTotal));
+
+        double total = sssTotal + philTotal + pagibigTotal;
+        totalContributionLabel.setText(String.format("%.2f", total));
+    };
+
+    // Add listeners
+    sssCheckbox.addItemListener(e -> compute.run());
+    philHealthCheckbox.addItemListener(e -> compute.run());
+    pagibigCheckbox.addItemListener(e -> compute.run());
+
+    // Initial compute based on restored states
+    compute.run();
+
+    // Layout panel
+    JPanel panel = new JPanel(new GridLayout(0, 5, 10, 5));
+    panel.add(new JLabel("Include"));
+    panel.add(new JLabel("Benefit"));
+    panel.add(new JLabel("Employer"));
+    panel.add(new JLabel("Employee"));
+    panel.add(new JLabel("Total"));
+
+    panel.add(sssCheckbox);
+    panel.add(new JLabel("SSS"));
+    panel.add(sssEmpLabel);
+    panel.add(sssEeLabel);
+    panel.add(sssTotalLabel);
+
+    panel.add(philHealthCheckbox);
+    panel.add(new JLabel("PhilHealth"));
+    panel.add(philEmpLabel);
+    panel.add(philEeLabel);
+    panel.add(philTotalLabel);
+
+    panel.add(pagibigCheckbox);
+    panel.add(new JLabel("Pag-IBIG"));
+    panel.add(pagibigEmpLabel);
+    panel.add(pagibigEeLabel);
+    panel.add(pagibigTotalLabel);
+
+    panel.add(new JLabel());
+    panel.add(new JLabel("TOTAL MONTHLY CONTRIBUTION:"));
+    panel.add(totalContributionLabel);
+    panel.add(new JLabel());
+    panel.add(new JLabel());
+
+    JOptionPane.showMessageDialog(null, panel, "Benefit Calculation", JOptionPane.PLAIN_MESSAGE);
+}
+
+    @Override
+    public Component getTableCellEditorComponent(JTable table, Object value,
+        boolean isSelected, int row, int column) {
+        this.table = table;
+        return button;
+    }
+
+    @Override
+    public Object getCellEditorValue() {
+        return "Benefits";
+    }
+
+    @Override
+    public boolean stopCellEditing() {
+        clicked = false;
+        return super.stopCellEditing();
+    }
+}
+private void handleDownloadPayslip() {
     int selectedRow = table.getSelectedRow();
 
     if (selectedRow == -1) {
-
         JOptionPane.showMessageDialog(this, "Please select a row.");
-
         return;
-
     }
- 
-    // Fetching fields from the selected row
 
-    String execId = model.getValueAt(selectedRow, 0).toString();       // ID No.
-
-    String name = model.getValueAt(selectedRow, 1).toString();         // Name
-
-    String dept = model.getValueAt(selectedRow, 2).toString();         // Department
-
-    String bank = model.getValueAt(selectedRow, 3).toString();         // Bank Info
-
-    String basicPay = model.getValueAt(selectedRow, 4).toString();     // Basic Pay
-
-    String allowance = model.getValueAt(selectedRow, 5).toString();    // Allowance
-
-    String execAllow = model.getValueAt(selectedRow, 6).toString();    // Executive Allowance
-
-    String mktg = model.getValueAt(selectedRow, 7).toString();         // Marketing Allowance
-
-    String workedDays = model.getValueAt(selectedRow, 17).toString();   // Number of Days (Worked Days)
-
-    String absent = model.getValueAt(selectedRow, 9).toString();       // Absent Deduction
-
-    String netPayFromTable = model.getValueAt(selectedRow, 16).toString(); // Net Pay (used as GROSS PAY here)
-
-    String cutoffStartStr = model.getValueAt(selectedRow, 22).toString();  // Cutoff Start
-
-    String cutoffEndStr = model.getValueAt(selectedRow, 23).toString();    // Cutoff End
-
-    String payDate = model.getValueAt(selectedRow, 21).toString();     // Pay Date
-
-    String payPeriod = cutoffStartStr + " - " + cutoffEndStr;          // Cutoff Range
- 
-    // Compute corrected NET PAY (Basic + Allowance)
-
-    double basic = Double.parseDouble(basicPay);
-
-    double allow = Double.parseDouble(allowance);
-
-    String computedNetPay = String.format("%.2f", basic + allow);
- 
-    // Generate HTML
+    String execId = model.getValueAt(selectedRow, 0).toString(); // ID NUMBER
+    String name = model.getValueAt(selectedRow, 1).toString();   // EMPLOYEE NAME
+    String basicPay = model.getValueAt(selectedRow, 4).toString();
+    String allowance = model.getValueAt(selectedRow, 5).toString();
+    String refreshment = model.getValueAt(selectedRow, 6).toString();
+    String mins = model.getValueAt(selectedRow, 7).toString();
+    String absent = model.getValueAt(selectedRow, 9).toString();
+    String halfDay = model.getValueAt(selectedRow, 11).toString();
+    String otHours = model.getValueAt(selectedRow, 14).toString();
+    String otPay = model.getValueAt(selectedRow, 15).toString();
+    String netPay = model.getValueAt(selectedRow, 16).toString();
+    String workedDays = model.getValueAt(selectedRow, 17).toString();
+    String payDate = model.getValueAt(selectedRow, 21).toString();
+    String cutoffStart = model.getValueAt(selectedRow, 22).toString();
+    String cutoffEnd = model.getValueAt(selectedRow, 23).toString();
+    String payPeriod = cutoffStart + " - " + cutoffEnd;
 
     String html = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Employee Payslip</title>
 <style>
-
-                body {
-
-                    font-family: Arial, sans-serif;
-
-                    margin: 40px auto;
-
-                    max-width: 800px;
-
-                    padding: 20px;
-
-                }
-
-                .payslip {
-
-                    border: 1px solid #000;
-
-                    padding: 20px;
-
-                }
-
-                .header {
-
-                    display: grid;
-
-                    grid-template-columns: 1fr 1fr;
-
-                    gap: 20px;
-
-                    margin-bottom: 20px;
-
-                }
-
-                .info-row {
-
-                    display: grid;
-
-                    grid-template-columns: 200px auto;
-
-                    margin-bottom: 10px;
-
-                }
-
-                .info-label {
-
-                    font-weight: bold;
-
-                }
-
-                .id-number {
-
-                    background-color: #e8f5e9;
-
-                    padding: 2px 5px;
-
-                }
-
-                .main-table {
-
-                    width: 100%%;
-
-                    border-collapse: collapse;
-
-                    margin: 20px 0;
-
-                }
-
-                .main-table th, .main-table td {
-
-                    border: 1px solid #000;
-
-                    padding: 8px;
-
-                }
-
-                .earnings-col { width: 40%%; }
-
-                .amount-col {
-
-                    width: 10%%;
-
-                    text-align: right;
-
-                }
-
-                .deductions-col { width: 40%%; }
-
-                .total-row { font-weight: bold; }
-
-                .signature-section {
-
-                    display: flex;
-
-                    justify-content: space-between;
-
-                    margin-top: 50px;
-
-                }
-
-                .signature-line {
-
-                    border-top: 1px solid #000;
-
-                    width: 250px;
-
-                    text-align: center;
-
-                    padding-top: 5px;
-
-                }
+    body { font-family: Arial, sans-serif; margin: 40px auto; max-width: 800px; padding: 20px; }
+    .payslip { border: 1px solid #000; padding: 20px; }
+    .header { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    .info-row { display: grid; grid-template-columns: 200px auto; margin-bottom: 10px; }
+    .info-label { font-weight: bold; }
+    .id-number { background-color: #e8f5e9; padding: 2px 5px; }
+    .main-table { width: 100%%; border-collapse: collapse; margin: 20px 0; }
+    .main-table th, .main-table td { border: 1px solid #000; padding: 8px; }
+    .earnings-col { width: 40%%; }
+    .amount-col { width: 10%%; text-align: right; }
+    .deductions-col { width: 40%%; }
+    .total-row { font-weight: bold; }
+    .signature-section { display: flex; justify-content: space-between; margin-top: 50px; }
+    .signature-line { border-top: 1px solid #000; width: 250px; text-align: center; padding-top: 5px; }
 </style>
 </head>
 <body>
 <div class="payslip">
 <div class="header">
-<div>
-<div class="info-row">
-<span class="info-label">Employee Name</span>
-<span>%s</span>
+    <div>
+        <div class="info-row"><span class="info-label">Employee Name</span><span>%s</span></div>
+        <div class="info-row"><span class="info-label">ID No.</span><span class="id-number">%s</span></div>
+    </div>
+    <div>
+        <div class="info-row"><span class="info-label">Pay Date</span><span>%s</span></div>
+        <div class="info-row"><span class="info-label">Worked Days</span><span>%s</span></div>
+        <div class="info-row"><span class="info-label">Pay Period</span><span>%s</span></div>
+    </div>
 </div>
-<div class="info-row">
-<span class="info-label">ID No.</span>
-<span class="id-number">%s</span>
-</div>
-</div>
-<div>
-<div class="info-row">
-<span class="info-label">Pay Date</span>
-<span>%s</span>
-</div>
-<div class="info-row">
-<span class="info-label">Worked Days</span>
-<span>%s</span>
-</div>
-<div class="info-row">
-<span class="info-label">Pay Period</span>
-<span>%s</span>
-</div>
-</div>
-</div>
- 
-                <table class="main-table">
+
+<table class="main-table">
 <tr>
-<th class="earnings-col">Earnings</th>
-<th class="amount-col">Amount</th>
-<th class="deductions-col">Deductions</th>
-<th class="amount-col">Amount</th>
+    <th class="earnings-col">Earnings</th><th class="amount-col">Amount</th>
+    <th class="deductions-col">Deductions</th><th class="amount-col">Amount</th>
 </tr>
-<tr>
-<td>Basic Pay</td>
-<td>%s</td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td>Allowance</td>
-<td>%s</td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td>Executive Allowance</td>
-<td>%s</td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td>Mktng. Allowance/Transpo</td>
-<td>%s</td>
-<td>Absent</td>
-<td>%s</td>
-</tr>
+<tr><td>Basic Pay</td><td>%s</td><td>SSS</td><td>%s</td></tr>
+<tr><td>Allowance</td><td>%s</td><td>PagIbig</td><td>%s</td></tr>
+<tr><td>Refreshment</td><td>%s</td><td>PhilHealth</td><td>%s</td></tr>
+<tr><td>OT Hours</td><td>%s</td><td></td><td></td></tr>
+<tr><td>OT Pay</td><td>%s</td><td></td><td></td></tr>
 <tr class="total-row">
-<td>NET PAY</td>
-<td>%s</td>
-<td>GROSS PAY</td>
-<td>%s</td>
+    <td colspan="2">Net Pay</td><td colspan="2" style="text-align: right;">%s</td>
 </tr>
 </table>
- 
-                <div class="signature-section">
-<div class="signature-line">
-<div>Employer Signature</div>
-</div>
-<div class="signature-line">
-<div>Employee Signature</div>
-</div>
+
+<div class="signature-section">
+    <div class="signature-line">Employer Signature</div>
+    <div class="signature-line">Employee Signature</div>
 </div>
 </div>
 </body>
 </html>
-
-        """.formatted(
-
+""".formatted(
         name, execId,
-
         payDate, workedDays, payPeriod,
-
-        basicPay, allowance, execAllow, mktg, absent,
-
-        computedNetPay, netPayFromTable
-
+        basicPay, absent,
+        allowance, halfDay,
+        refreshment, mins,
+        otHours, otPay,
+        netPay
     );
- 
-    // Generate the PDF using PdfShiftConverter
 
     try {
-
         PdfShiftConverter converter = new PdfShiftConverter("sk_dc48b1f99bb971396765c80111f7d78e9e5fa723");
-
         converter.convertToPdfWithChooser(html);
-
     } catch (Exception e) {
-
         e.printStackTrace();
-
         JOptionPane.showMessageDialog(this, "Failed to generate payslip: " + e.getMessage());
-
     }
-
 }
- 
- 
+
+
  
 private int countWeekdaysBetween(String start, String end) {
 
@@ -461,8 +466,6 @@ private int countWeekdaysBetween(String start, String end) {
 
 }
 
- 
-    
     private void openAddPayrollDialog() {
     JTextField payDateField = new JTextField("2025-08-31");
     JTextField cutoffStart = new JTextField();
@@ -652,6 +655,7 @@ private int countWeekdaysBetween(String start, String end) {
     int[] greenBackgroundCols = {5, 6, 7, 9, 11, 14};
     int[] redTextCols = {7, 9, 11, 14};
 
+    // Declare the renderer OUTSIDE the loop so it's accessible
     DefaultTableCellRenderer customRenderer = new DefaultTableCellRenderer() {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value,
@@ -689,9 +693,10 @@ private int countWeekdaysBetween(String start, String end) {
         }
     };
 
-    // Apply to all columns
+    // Apply the renderer to all columns EXCEPT "BENEFITS"
     for (int i = 0; i < table.getColumnCount(); i++) {
+        if (table.getColumnName(i).equals("BENEFITS")) continue; // Skip the button column
         table.getColumnModel().getColumn(i).setCellRenderer(customRenderer);
     }
-   }
-   }
+}
+}
