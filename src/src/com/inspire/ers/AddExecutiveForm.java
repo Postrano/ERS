@@ -43,7 +43,7 @@ public class AddExecutiveForm extends JDialog {
         basicPayField = new JTextField(20);
         allowanceField = new JTextField(20);
         sssNumberField = new JTextField(20);
-        sssValueField = new JTextField(20);
+//        sssValueField = new JTextField(20);
         pagibigNumberField = new JTextField(20);
         tinNumberField = new JTextField(20);
         philhealthNumberField = new JTextField(20);
@@ -56,7 +56,7 @@ public class AddExecutiveForm extends JDialog {
         addRow(formPanel, gbc, "Basic Pay:", basicPayField);
         addRow(formPanel, gbc, "Allowance:", allowanceField);
         addRow(formPanel, gbc, "SSS Number:", sssNumberField);
-        addRow(formPanel, gbc, "SSS Value:", sssValueField);
+//        addRow(formPanel, gbc, "SSS Value:", sssValueField);
         addRow(formPanel, gbc, "Pag-IBIG Number:", pagibigNumberField);
         addRow(formPanel, gbc, "TIN Number:", tinNumberField);
         addRow(formPanel, gbc, "PhilHealth Number:", philhealthNumberField);
@@ -100,7 +100,7 @@ public class AddExecutiveForm extends JDialog {
     public AddExecutiveForm(ExecutivePage parent, String selectedCompany,
                           String execId, String name, String dept, String bank,
                           double basicPay, double allowance,
-                          String sssNumber, double sssValue,
+                          String sssNumber,
                           String pagibigNumber, String tinNumber, String philhealthNumber) {
         this(parent, selectedCompany);
         isEditMode = true;
@@ -114,7 +114,7 @@ public class AddExecutiveForm extends JDialog {
         basicPayField.setText(String.valueOf(basicPay));
         allowanceField.setText(String.valueOf(allowance));
         sssNumberField.setText(sssNumber);
-        sssValueField.setText(String.valueOf(sssValue));
+//        sssValueField.setText(String.valueOf(sssValue));
         pagibigNumberField.setText(pagibigNumber);
         tinNumberField.setText(tinNumber);
         philhealthNumberField.setText(philhealthNumber);
@@ -124,7 +124,7 @@ public class AddExecutiveForm extends JDialog {
         if (idField.getText().isEmpty() || nameField.getText().isEmpty() ||
             deptField.getText().isEmpty() || bankField.getText().isEmpty() ||
             basicPayField.getText().isEmpty() || allowanceField.getText().isEmpty() ||
-            sssNumberField.getText().isEmpty() || sssValueField.getText().isEmpty() ||
+            sssNumberField.getText().isEmpty() || 
             pagibigNumberField.getText().isEmpty() ||
             tinNumberField.getText().isEmpty() || philhealthNumberField.getText().isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please fill in all fields.");
@@ -134,7 +134,7 @@ public class AddExecutiveForm extends JDialog {
         try {
             Double.parseDouble(basicPayField.getText());
             Double.parseDouble(allowanceField.getText());
-            Double.parseDouble(sssValueField.getText());
+//            Double.parseDouble(sssValueField.getText());
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(this, "Basic Pay, Allowance, and SSS Value must be numbers.");
             return false;
@@ -159,7 +159,7 @@ public class AddExecutiveForm extends JDialog {
                 INSERT INTO executive_info (
                     exec_id, name, department_or_position, bank, 
                     basic_pay, allowance, company,
-                    sss_number, sss_value,
+                    sss_number, 
                     pagibig_number, tin_number, philhealth_number
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
@@ -173,10 +173,10 @@ public class AddExecutiveForm extends JDialog {
             execStmt.setDouble(6, allowance);
             execStmt.setString(7, selectedCompany);
             execStmt.setString(8, sssNumberField.getText().trim());
-            execStmt.setDouble(9, Double.parseDouble(sssValueField.getText().trim()));
-            execStmt.setString(10, pagibigNumberField.getText().trim());
-            execStmt.setString(11, tinNumberField.getText().trim());
-            execStmt.setString(12, philhealthNumberField.getText().trim());
+//            execStmt.setDouble(9, Double.parseDouble(sssValueField.getText().trim()));
+            execStmt.setString(9, pagibigNumberField.getText().trim());
+            execStmt.setString(10, tinNumberField.getText().trim());
+            execStmt.setString(11, philhealthNumberField.getText().trim());
 
             execStmt.executeUpdate();
 
@@ -204,7 +204,7 @@ public class AddExecutiveForm extends JDialog {
         double basicPay = Double.parseDouble(basicPayField.getText().trim());
         double allowance = Double.parseDouble(allowanceField.getText().trim());
         String sssNumber = sssNumberField.getText().trim();
-        double sssValue = Double.parseDouble(sssValueField.getText().trim());
+//        double sssValue = Double.parseDouble(sssValueField.getText().trim());
         String pagibigNumber = pagibigNumberField.getText().trim();
         String tinNumber = tinNumberField.getText().trim();
         String philhealthNumber = philhealthNumberField.getText().trim();
@@ -214,7 +214,7 @@ public class AddExecutiveForm extends JDialog {
                 UPDATE executive_info SET
                     name = ?, department_or_position = ?, bank = ?,
                     basic_pay = ?, allowance = ?,
-                    sss_number = ?, sss_value = ?, pagibig_number = ?,
+                    sss_number = ?,  pagibig_number = ?,
                     tin_number = ?, philhealth_number = ?
                 WHERE exec_id = ?
             """;
@@ -226,11 +226,11 @@ public class AddExecutiveForm extends JDialog {
             stmt.setDouble(4, basicPay);
             stmt.setDouble(5, allowance);
             stmt.setString(6, sssNumber);
-            stmt.setDouble(7, sssValue);
-            stmt.setString(8, pagibigNumber);
-            stmt.setString(9, tinNumber);
-            stmt.setString(10, philhealthNumber);
-            stmt.setString(11, execId);
+           
+            stmt.setString(7, pagibigNumber);
+            stmt.setString(8, tinNumber);
+            stmt.setString(9, philhealthNumber);
+            stmt.setString(10, execId);
 
             stmt.executeUpdate();
         }
