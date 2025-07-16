@@ -44,6 +44,17 @@ public class HomePage extends JFrame {
         JPanel welcomePanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 10));
         welcomePanel.setBackground(topPanel.getBackground());
         welcomePanel.add(welcomeLabel);
+        
+        // Position Filter Dropdown
+        String[] positions = {"All Departments", "System Developer", "Marketing", "Sales Associate"};
+        JComboBox<String> positionFilter = new JComboBox<>(positions);
+        positionFilter.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        positionFilter.setPreferredSize(new Dimension(160, 30));
+        
+        String[] companyOptions = {"All Companies", "IHI", "INGI", "INSPIRE ALLIANCE"};
+        JComboBox<String> companyFilter = new JComboBox<>(companyOptions);
+        companyFilter.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        companyFilter.setPreferredSize(new Dimension(160, 30));
 
         // Search Field
         JTextField searchField = new JTextField(20);
@@ -73,6 +84,10 @@ public class HomePage extends JFrame {
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         rightPanel.setBackground(topPanel.getBackground());
         rightPanel.add(employeeCountLabel);
+        if ("ALL".equalsIgnoreCase(selectedCompany)) {
+    rightPanel.add(companyFilter); // Only show if super admin
+}
+        rightPanel.add(positionFilter);  // Add before or after searchField
         rightPanel.add(searchField);
 
         topPanel.add(welcomePanel, BorderLayout.NORTH);
@@ -111,20 +126,45 @@ public class HomePage extends JFrame {
             finalPayrollPage.setVisible(true);
         });
 
-        searchField.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyReleased(KeyEvent e) {
-                String searchText = searchField.getText().toLowerCase();
-                filterEmployeeList(searchText);
-            }
-        });
+        // Unified filter logic for both position and search
+KeyAdapter keyListener = new KeyAdapter() {
+    @Override
+    public void keyReleased(KeyEvent e) {
+        updateFilter(
+    searchField.getText(),
+    positionFilter.getSelectedItem().toString(),
+    "ALL".equalsIgnoreCase(selectedCompany) ? companyFilter.getSelectedItem().toString() : selectedCompany
+);
+
+    }
+};
+
+searchField.addKeyListener(keyListener);
+positionFilter.addActionListener(e -> updateFilter(
+    searchField.getText(),
+    positionFilter.getSelectedItem().toString(),
+    "ALL".equalsIgnoreCase(selectedCompany) ? companyFilter.getSelectedItem().toString() : selectedCompany
+));
+if ("ALL".equalsIgnoreCase(selectedCompany)) {
+    companyFilter.addActionListener(e -> updateFilter(
+        searchField.getText(),
+        positionFilter.getSelectedItem().toString(),
+        companyFilter.getSelectedItem().toString()
+    ));
+}
 
         // Load from database
         loadEmployeesFromDB();
     }
 
     private void loadEmployeesFromDB() {
-        List<Employee> dbEmployees = EmployeeDAO.fetchEmployeesByCompany(selectedCompany);
+        List<Employee> dbEmployees;
+if ("ALL".equalsIgnoreCase(selectedCompany)) {
+    dbEmployees = EmployeeDAO.fetchAllEmployees(); // Create this method
+} else {
+    dbEmployees = EmployeeDAO.fetchEmployeesByCompany(selectedCompany);
+}
+
         employees.addAll(dbEmployees);
         updateEmployeeList();
         employeeCountLabel.setText("#Employee: " + employees.size());
@@ -195,6 +235,36 @@ public class HomePage extends JFrame {
 
         return card;
     }
+    
+    private void updateFilter(String searchText, String position, String company) {
+    employeeListPanel.removeAll();
+
+    boolean isAllCompanies = "All Companies".equalsIgnoreCase(company);
+    boolean isAllDepartments = "All Departments".equalsIgnoreCase(position);
+
+    for (Employee employee : employees) {
+        String fullName = (employee.getFirstName() + " " + employee.getLastName()).toLowerCase();
+        String empCompany = employee.getCompany();
+        String empPosition = employee.getPosition();
+
+        boolean matchesSearch = fullName.contains(searchText.toLowerCase());
+
+        // Company filtering
+        boolean matchesCompany = isAllCompanies || (empCompany != null && empCompany.equalsIgnoreCase(company));
+
+        // Position filtering
+        boolean matchesPosition = isAllDepartments || (empPosition != null && empPosition.equalsIgnoreCase(position));
+
+        if (matchesSearch && matchesCompany && matchesPosition) {
+            employeeListPanel.add(createEmployeeCard(employee));
+            employeeListPanel.add(Box.createVerticalStrut(10));
+        }
+    }
+
+    employeeListPanel.revalidate();
+    employeeListPanel.repaint();
+}
+
 
     private void filterEmployeeList(String searchText) {
         employeeListPanel.removeAll();
