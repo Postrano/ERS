@@ -400,7 +400,7 @@ private void handleDownloadPayslip() {
     <th class="earnings-col">Earnings</th><th class="amount-col">Amount</th>
     <th class="deductions-col">Deductions</th><th class="amount-col">Amount</th>
 </tr>
-<tr><td>Basic Pay</td><td>%s</td><td>SSS</td><td>%s</td></tr>
+<tr><td>Basic Pay</td><td>%s</td><td>Absent</td><td>%s</td></tr>
 <tr><td>Allowance</td><td>%s</td><td>PagIbig</td><td>%s</td></tr>
 <tr><td>Refreshment</td><td>%s</td><td>PhilHealth</td><td>%s</td></tr>
 <tr><td>OT Hours</td><td>%s</td><td></td><td></td></tr>
