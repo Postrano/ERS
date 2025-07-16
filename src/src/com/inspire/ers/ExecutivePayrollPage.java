@@ -9,6 +9,11 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import com.inspire.ers.PdfShiftConverter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Base64;
 import javax.swing.event.TableModelEvent;
 
 public class ExecutivePayrollPage extends JFrame {
@@ -106,7 +111,7 @@ public class ExecutivePayrollPage extends JFrame {
         bottomPanel.add(saveBtn);
 
         JButton htmlBtn = new JButton("Download Payslip (HTML)");
-        htmlBtn.addActionListener(e -> downloadPayslip());
+        htmlBtn.addActionListener(e -> downloadPayslip(selectedCompany));
         bottomPanel.add(htmlBtn);
 
         add(bottomPanel, BorderLayout.SOUTH);
@@ -134,7 +139,7 @@ public class ExecutivePayrollPage extends JFrame {
         return count;
     }
 
-private void loadPayrollData(java.sql.Date startDate, java.sql.Date endDate) {
+    private void loadPayrollData(java.sql.Date startDate, java.sql.Date endDate) {
     tableModel.setRowCount(0);
     int totalWorkingDays = countWeekdaysBetween(startDate, endDate);
 
@@ -248,16 +253,10 @@ private void loadPayrollData(java.sql.Date startDate, java.sql.Date endDate) {
         ex.printStackTrace();
     }
 }
-
-
   
-  
-  
-  private double roundTwoDecimals(double value) {
+    private double roundTwoDecimals(double value) {
     return Math.round(value * 100.0) / 100.0;
 }
-
-
 
     private void saveChangesToDatabase() {
         String sql = "UPDATE executive_info SET allowance = ?, marketing_allowance = ?, executive_allowance = ? WHERE exec_id = ?";
@@ -297,10 +296,22 @@ private void loadPayrollData(java.sql.Date startDate, java.sql.Date endDate) {
             return 0;
         }
     }
+    
+    
+    private String encodeImageToBase64(String imagePath) {
+    try {
+        Path path = Paths.get(imagePath);
+        byte[] imageBytes = Files.readAllBytes(path);
+        String base64 = Base64.getEncoder().encodeToString(imageBytes);
+        return "data:image/png;base64," + base64;
+    } catch (IOException e) {
+        e.printStackTrace();
+        return "";
+    }
+}
 
   
-    
-private void downloadPayslip() {
+  private void downloadPayslip(String selectedCompany) {
     int selectedRow = payrollTable.getSelectedRow();
     if (selectedRow == -1) {
         JOptionPane.showMessageDialog(this, "Please select a row from the table.");
@@ -319,125 +330,274 @@ private void downloadPayslip() {
 
     double grossEarnings = basicPay + allowance + execAllow + mktg;
 
-    // Deduction components
     double sssEmp = Double.parseDouble(tableModel.getValueAt(selectedRow, 9).toString());
     double pagibigEmp = Double.parseDouble(tableModel.getValueAt(selectedRow, 10).toString());
     double philhealthEmp = Double.parseDouble(tableModel.getValueAt(selectedRow, 11).toString());
     double birEmp = Double.parseDouble(tableModel.getValueAt(selectedRow, 12).toString());
 
-    double totalDeduction = sssEmp + pagibigEmp + philhealthEmp + birEmp;
-
     int totalDays = totalPresent + totalAbsent;
     double dailyRate = (totalDays > 0) ? basicPay / totalDays : 0;
     double absentDeduction = totalAbsent * dailyRate;
 
-    double netPay = grossEarnings - absentDeduction - totalDeduction;
+    // ✅ Fix: Include absentDeduction in totalDeduction
+    double totalDeduction = sssEmp + pagibigEmp + philhealthEmp + birEmp + absentDeduction;
+
+    double netPay = grossEarnings - totalDeduction;
 
     String payDate = new SimpleDateFormat("MMMM dd, yyyy").format(payDateSpinner.getValue());
     String payPeriod = new SimpleDateFormat("MMMM dd").format(startDateSpinner.getValue()) +
                        " - " + new SimpleDateFormat("dd, yyyy").format(endDateSpinner.getValue());
+    
+        String tin;
+        String location;
 
-    String html = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Employee Payslip</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 40px auto; max-width: 800px; padding: 20px; }
-        .payslip { border: 1px solid #000; padding: 20px; }
-        .company-title {
-            text-align: center;
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-        }
-        .header { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-        .info-row { display: grid; grid-template-columns: 200px auto; margin-bottom: 10px; }
-        .info-label { font-weight: bold; }
-        .id-number { background-color: #e8f5e9; padding: 2px 5px; }
-        .main-table { width: 100%%; border-collapse: collapse; margin: 20px 0; }
-        .main-table th, .main-table td { border: 1px solid #000; padding: 8px; }
-        .earnings-col { width: 40%%; }
-        .amount-col { width: 10%%; text-align: right; }
-        .deductions-col { width: 40%%; }
-        .total-row { font-weight: bold; }
-        .signature-section { display: flex; justify-content: space-between; margin-top: 50px; }
-        .signature-line { border-top: 1px solid #000; width: 250px; text-align: center; padding-top: 5px; }
-    </style>
-</head>
-<body>
-    <div class="payslip">
-        <div class="company-title">INSPIRE INCORPORATION</div>
+if ("INGI".equalsIgnoreCase(selectedCompany)) {
+    tin = "010-824-345-0000";
+    location = "PSE Tower One Bonifacio High Street 5th Ave. cor. 28th Street BGC, Taguig, Metro Manila";
+} else if ("INSPIRE ALLIANCE".equalsIgnoreCase(selectedCompany)) {
+    tin = "010-911-458-000";
+    location = "MAIN OFFICE: 6F Alliance Global Tower,\n11th Avenue\ncorner 36th St, Taguig,\nMetro Manila";
+} else if ("IHI".equalsIgnoreCase(selectedCompany)) {
+    tin = "660-605-053-00000";
+    location = "PSE Tower One Bonifacio High Street 5th Ave. cor. 28th Street BGC, Taguig, Metro Manila";
+} else {
+    tin = "123-456-789-000";
+    location = "123 Main St., Makati City, Philippines";
+}
 
-        <div class="header">
-            <div>
-                <div class="info-row"><span class="info-label">Employee Name</span><span>%s</span></div>
-                <div class="info-row"><span class="info-label">ID No.</span><span class="id-number">%s</span></div>
-            </div>
-            <div>
-                <div class="info-row"><span class="info-label">Pay Date</span><span>%s</span></div>
-                <div class="info-row"><span class="info-label">Worked Days</span><span>%d</span></div>
-                <div class="info-row"><span class="info-label">Absent Days</span><span>%d</span></div>
-                <div class="info-row"><span class="info-label">Pay Period</span><span>%s</span></div>
-            </div>
-        </div>
+String logoUrl;
 
-        <table class="main-table">
-            <tr>
-                <th class="earnings-col">Earnings</th>
-                <th class="amount-col">Amount</th>
-                <th class="deductions-col">Deductions</th>
-                <th class="amount-col">Amount</th>
-            </tr>
-            <tr><td>Basic Pay</td><td>%.2f</td><td>SSS</td><td>-%.2f</td></tr>
-            <tr><td>Allowance</td><td>%.2f</td><td>Pag-IBIG</td><td>-%.2f</td></tr>
-            <tr><td>Executive Allowance</td><td>%.2f</td><td>PhilHealth</td><td>-%.2f</td></tr>
-            <tr><td>Mktng. Allowance/Transpo</td><td>%.2f</td><td>BIR</td><td>-%.2f</td></tr>
-            <tr><td></td><td></td><td>Absent Deduction</td><td>-%.2f</td></tr>
-            <tr class="total-row">
-                <td>Gross Earnings</td><td>%.2f</td><td>Net Pay</td><td>%.2f</td>
-            </tr>
-        </table>
-
-        <div class="signature-section">
-            <div class="signature-line">Employer Signature</div>
-            <div class="signature-line">Employee Signature</div>
-        </div>
-    </div>
-</body>
-</html>
-""".formatted(
-    name, execId,
-    payDate, totalPresent, totalAbsent, payPeriod,
-    basicPay, sssEmp,
-    allowance, pagibigEmp,
-    execAllow, philhealthEmp,
-    mktg, birEmp,
-    absentDeduction,
-    grossEarnings, netPay
-);
-
-    // Convert HTML to PDF
-    String apiKey = "sk_dc48b1f99bb971396765c80111f7d78e9e5fa723";
-    PdfShiftConverter converter = new PdfShiftConverter(apiKey);
-    converter.convertToPdfWithChooser(html);
+if ("INGI".equalsIgnoreCase(selectedCompany)) {
+    logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/inspirenextglobal.png");
+} else if ("INSPIRE ALLIANCE".equalsIgnoreCase(selectedCompany)) {
+    logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/inspirealliance.png");
+} else if ("IHI".equalsIgnoreCase(selectedCompany)) {
+    logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/inpireholding.png");
+} else {
+    logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/deepocean5.jpg");
 }
 
 
 
 
 
-//""".formatted(
-//    name, execId, departmentOrPosition, bank, // employee info
-//    payDate, totalWorkingDays, totalPresent, payPeriod, // header info
-//    basicPay, sss, allowance, pagibig, refreshment, philhealth, // earnings + deductions
-//    otPay, absentLabel, absentDeduction, execAllow, lateLabel, lateDeduction,
-//    mktg, usedLeaveLabel, usedLeaveAmount, usedLeaveNote, unusedLeaveLabel,
-//    unusedLeaveAmount, totalBasicPay, /* totalDeductions, */ totalBasicPay // net pay
-//);
 
+   String html = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Payslip</title>
+    <style>
+        @page {
+            margin-top: 2.00cm;
+            margin-bottom: 2.00cm;
+            margin-left: 3.18cm;
+            margin-right: 3.18cm;
+        }
+    
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #222;
+        }
+    
+        .company-header {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+    
+        .company-info {
+            text-align: center;
+            font-size: 10px;
+            color: #555;
+            margin-bottom: 25px;
+        }
+    
+        .info-section {
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+            padding: 5px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+    
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px 10px;
+        }
+    
+        .info-row {
+            display: flex;
+            gap: 5px;
+        }
+    
+        .label {
+            font-weight: 600;
+            min-width: 100px;
+            color: #333;
+        }
+    
+        .value {
+            color: #444;
+        }
+    
+        table {
+            width: 100%%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+    
+        th, td {
+            border: 1px solid #999;
+            padding: 8px 12px;
+            text-align: left;
+        }
+    
+        th {
+            background-color: #e9e9e9;
+        }
+    
+        .summary-and-signatures {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 25px;
+            gap: 30px;
+        }
+    
+        .net-summary {
+            flex: 1;
+        }
+    
+        .signature-boxes {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            text-align: center;
+        }
+    
+        .sig-box {
+            margin-top: 50px;
+            color: black;
+        }
+    
+        .sig-line {
+            border-top: 1px solid #000;
+            margin-top: 50px;
+            padding-top: 5px;
+            font-size: 13px;
+        }
+                 
+                 .company-header-wrapper {
+                     display: flex;
+                     gap:5px;
+                     align-items: center;
+                     margin-bottom: 5px;
+                  text-align: center;
+                 }
+                 
+                 .company-logo img {
+                     height: 60px; /* Adjust size as needed */
+                 }
+                 
+                 .company-name {
+                     font-size: 24px;
+                     font-weight: bold;
+                  text-align: center;
+                 }
+    </style>
+</head>
+<body>
+    <div class="company-header-wrapper">
+        <div class="company-logo">
+            <img src="%s" alt="Company Logo">
+        </div>
+        <div class="company-name">%s</div>
+    </div>
+       <div class="company-info">
+           TIN: %s &nbsp; | &nbsp; Location: <span>%s</span>
+       </div>
+
+    <div class="info-section">
+        <div class="info-grid">
+            <div class="info-row"><span class="label">Employee Name:</span><span class="value">%s</span></div>
+            <div class="info-row"><span class="label">Pay Date:</span><span class="value">%s</span></div>
+            <div class="info-row"><span class="label">Worked Days:</span><span class="value">%d</span></div>
+
+            <div class="info-row"><span class="label">Employee ID:</span><span class="value">%s</span></div>
+            <div class="info-row"><span class="label">Pay Period:</span><span class="value">%s</span></div>
+        
+        </div>
+    </div>
+
+    <table>
+        <thead><tr><th colspan="2">Earnings</th></tr></thead>
+        <tr><td>Basic Pay</td><td>Php %.2f</td></tr>
+        <tr><td>Allowance</td><td>Php %.2f</td></tr>
+        <tr><td>Executive Allowance</td><td>Php %.2f</td></tr>
+        <tr><td>Marketing/Transportation</td><td>Php %.2f</td></tr>
+        <tr><th>Total Earnings</th><th>Php %.2f</th></tr>
+    </table>
+
+    <table>
+        <thead><tr><th>Deduction</th><th>Amount</th></tr></thead>
+        <tr><td>SSS</td><td>Php %.2f</td></tr>
+        <tr><td>Pag-IBIG</td><td>Php %.2f</td></tr>
+        <tr><td>PhilHealth</td><td>Php %.2f</td></tr>
+        <tr><td>BIR</td><td>Php %.2f</td></tr>
+        <tr><td>Absent Deduction (%d Day%s)</td><td>Php %.2f</td></tr>
+        <tr><th>Total Deductions</th><th>Php %.2f</th></tr>
+    </table>
+
+    <div class="summary-and-signatures">
+        
+
+        <div class="signature-boxes">
+            <div class="sig-box"><div class="sig-line">CEO Signature</div></div>
+            <div class="sig-box"><div class="sig-line">President Signature</div></div>
+            <div class="sig-box"><div class="sig-line">Accounting Signature</div></div>
+            <div class="sig-box"><div class="sig-line">Employee Signature</div></div>
+        </div>
+                 
+                 <table class="net-summary">
+                             <thead><tr><th colspan="2">Net Pay Summary</th></tr></thead>
+                             <tr><td>Gross Earnings</td><td>Php %.2f</td></tr>
+                             <tr><td>Total Deductions</td><td>Php %.2f</td></tr>
+                             <tr><th>Net Pay</th><th>Php %.2f</th></tr>
+                         </table>
+    </div>
+</body>
+</html>
+""".formatted(
+        logoUrl,selectedCompany, tin, location,
+        name, payDate, totalPresent,
+        execId, payPeriod, 
+        basicPay, allowance, execAllow, mktg, grossEarnings,
+        sssEmp, pagibigEmp, philhealthEmp, birEmp, totalAbsent, totalAbsent > 1 ? "s" : "", absentDeduction, totalDeduction,
+        grossEarnings, totalDeduction, netPay
+    );
+
+
+    String apiKey = "sk_dc48b1f99bb971396765c80111f7d78e9e5fa723";
+    PdfShiftConverter converter = new PdfShiftConverter(apiKey);
+    converter.convertToPdfWithChooser(html);
+}
+
+
+    //""".formatted(
+    //    name, execId, departmentOrPosition, bank, // employee info
+    //    payDate, totalWorkingDays, totalPresent, payPeriod, // header info
+    //    basicPay, sss, allowance, pagibig, refreshment, philhealth, // earnings + deductions
+    //    otPay, absentLabel, absentDeduction, execAllow, lateLabel, lateDeduction,
+    //    mktg, usedLeaveLabel, usedLeaveAmount, usedLeaveNote, unusedLeaveLabel,
+    //    unusedLeaveAmount, totalBasicPay, /* totalDeductions, */ totalBasicPay // net pay
+    //);
 
 
 
