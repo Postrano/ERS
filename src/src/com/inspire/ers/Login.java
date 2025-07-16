@@ -23,7 +23,11 @@ public class Login extends JFrame {
     private final String ADMIN_USERNAME = "admin";
     private final String ADMIN_PASSWORD = "admin123";
     
-     public Connection cn;
+    private final String SUPER_ADMIN_USERNAME = "superadmin";
+    private final String SUPER_ADMIN_PASSWORD = "super123";
+
+ 
+    public Connection cn;
     public Statement st;
     
     private InputStream in;
@@ -119,7 +123,16 @@ public class Login extends JFrame {
         String username = usernameField.getText();
         String password = new String(passwordField.getPassword());
 
-        if (username.equals(ADMIN_USERNAME) && password.equals(ADMIN_PASSWORD)) {
+        if (username.equals(SUPER_ADMIN_USERNAME) && password.equals(SUPER_ADMIN_PASSWORD)) {
+            // Super Admin bypasses company selection
+            JOptionPane.showMessageDialog(Login.this,
+                "Welcome, Super Admin!");
+
+            HomePage homePage = new HomePage("ALL"); // "ALL" signals super admin access
+            homePage.setVisible(true);
+            dispose();
+        } 
+        else if (username.equals(ADMIN_USERNAME) && password.equals(ADMIN_PASSWORD)) {
             // Show company selection dialog
             String[] companies = {"IHI", "INGI", "INSPIRE ALLIANCE"};
             String selectedCompany = (String) JOptionPane.showInputDialog(
@@ -132,16 +145,11 @@ public class Login extends JFrame {
                 companies[0]
             );
 
-            // If user selects a company
             if (selectedCompany != null) {
-                // Optional: Do something with the selectedCompany, like storing it globally
-                // Example: AppState.setCurrentCompany(selectedCompany);
-
                 JOptionPane.showMessageDialog(Login.this,
                     "Welcome to " + selectedCompany + "!");
 
-                // Go to homepage
-             HomePage homePage = new HomePage(selectedCompany); // ✅ Correct
+                HomePage homePage = new HomePage(selectedCompany);
                 homePage.setVisible(true);
                 dispose();
             } else {
@@ -158,9 +166,7 @@ public class Login extends JFrame {
                 JOptionPane.ERROR_MESSAGE);
         }
     }
-});
-
-        
+});     
 
 
         // Add components to login panel

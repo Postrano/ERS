@@ -281,36 +281,54 @@ private boolean pagibigSelected = false;
     compute.run();
 
     // Layout panel
-    JPanel panel = new JPanel(new GridLayout(0, 5, 10, 5));
-    panel.add(new JLabel("Include"));
-    panel.add(new JLabel("Benefit"));
-    panel.add(new JLabel("Employer"));
-    panel.add(new JLabel("Employee"));
-    panel.add(new JLabel("Total"));
+    JPanel panel = new JPanel();
+panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+panel.setPreferredSize(new Dimension(400, 250)); // reduce width
 
-    panel.add(sssCheckbox);
-    panel.add(new JLabel("SSS"));
-    panel.add(sssEmpLabel);
-    panel.add(sssEeLabel);
-    panel.add(sssTotalLabel);
+// Header
+JPanel headerRow = new JPanel(new GridLayout(1, 5, 5, 5));
+headerRow.add(new JLabel("Include"));
+headerRow.add(new JLabel("Benefit"));
+headerRow.add(new JLabel("Employer"));
+headerRow.add(new JLabel("Employee"));
+headerRow.add(new JLabel("Total"));
+panel.add(headerRow);
 
-    panel.add(philHealthCheckbox);
-    panel.add(new JLabel("PhilHealth"));
-    panel.add(philEmpLabel);
-    panel.add(philEeLabel);
-    panel.add(philTotalLabel);
+// SSS Row
+JPanel sssRow = new JPanel(new GridLayout(1, 5, 5, 5));
+sssRow.add(sssCheckbox);
+sssRow.add(new JLabel("SSS"));
+sssRow.add(sssEmpLabel);
+sssRow.add(sssEeLabel);
+sssRow.add(sssTotalLabel);
+panel.add(sssRow);
 
-    panel.add(pagibigCheckbox);
-    panel.add(new JLabel("Pag-IBIG"));
-    panel.add(pagibigEmpLabel);
-    panel.add(pagibigEeLabel);
-    panel.add(pagibigTotalLabel);
+// PhilHealth Row
+JPanel philRow = new JPanel(new GridLayout(1, 5, 5, 5));
+philRow.add(philHealthCheckbox);
+philRow.add(new JLabel("PhilHealth"));
+philRow.add(philEmpLabel);
+philRow.add(philEeLabel);
+philRow.add(philTotalLabel);
+panel.add(philRow);
 
-    panel.add(new JLabel());
-    panel.add(new JLabel("TOTAL MONTHLY CONTRIBUTION:"));
-    panel.add(totalContributionLabel);
-    panel.add(new JLabel());
-    panel.add(new JLabel());
+// Pag-IBIG Row
+JPanel pagibigRow = new JPanel(new GridLayout(1, 5, 5, 5));
+pagibigRow.add(pagibigCheckbox);
+pagibigRow.add(new JLabel("Pag-IBIG"));
+pagibigRow.add(pagibigEmpLabel);
+pagibigRow.add(pagibigEeLabel);
+pagibigRow.add(pagibigTotalLabel);
+panel.add(pagibigRow);
+
+// Total Contribution Row
+panel.add(Box.createRigidArea(new Dimension(0, 50)));
+
+JPanel totalRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
+totalRow.add(new JLabel("Total Monthly Contribution: "));
+totalRow.add(totalContributionLabel);
+panel.add(totalRow);
+
 
     JOptionPane.showMessageDialog(null, panel, "Benefit Calculation", JOptionPane.PLAIN_MESSAGE);
 }
@@ -333,6 +351,8 @@ private boolean pagibigSelected = false;
         return super.stopCellEditing();
     }
 }
+
+
 private void handleDownloadPayslip() {
     int selectedRow = table.getSelectedRow();
 
