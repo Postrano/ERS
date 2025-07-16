@@ -46,6 +46,7 @@ public class EmployeeDAO {
                 emp.setTinNumber(rs.getString("tin"));
                 emp.setBankAccount(rs.getString("bank_account"));
                 emp.setPhoto(rs.getBytes("photo")); // ✅ Correctly fetch photo as byte[]
+                emp.setCompany(rs.getString("company")); // ✅ This was missing
 
                 employees.add(emp);
             }
