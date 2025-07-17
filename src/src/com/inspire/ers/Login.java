@@ -128,13 +128,13 @@ public class Login extends JFrame {
             JOptionPane.showMessageDialog(Login.this,
                 "Welcome, Super Admin!");
 
-            HomePage homePage = new HomePage("ALL"); // "ALL" signals super admin access
+            HomePage homePage = new HomePage("ALL", "Super Admin"); // "ALL" signals super admin access
             homePage.setVisible(true);
             dispose();
         } 
         else if (username.equals(ADMIN_USERNAME) && password.equals(ADMIN_PASSWORD)) {
             // Show company selection dialog
-            String[] companies = {"IHI", "INGI", "INSPIRE ALLIANCE"};
+            String[] companies = {"Inspire Holdings Incorporated", "Inspire Next Global Inc.", "Inspire Alliance Fund Group Inc."};
             String selectedCompany = (String) JOptionPane.showInputDialog(
                 Login.this,
                 "Select Company:",
@@ -149,7 +149,7 @@ public class Login extends JFrame {
                 JOptionPane.showMessageDialog(Login.this,
                     "Welcome to " + selectedCompany + "!");
 
-                HomePage homePage = new HomePage(selectedCompany);
+                HomePage homePage = new HomePage(selectedCompany, "Admin");
                 homePage.setVisible(true);
                 dispose();
             } else {

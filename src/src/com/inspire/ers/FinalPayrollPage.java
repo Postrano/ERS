@@ -6,13 +6,18 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableColumn;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.io.IOException;
 import java.util.List;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
 
 public class FinalPayrollPage extends JFrame {
 
@@ -254,6 +259,12 @@ private boolean pagibigSelected = false;
             }
             pagibigTotal = pagibigEmp + pagibigEe;
         }
+        
+         // Set values to class-level fields (used in payslip)
+       sssValue = sssEe;
+philhealthValue = philEe;
+pagibigValue = pagibigEe;
+
 
         // Update labels
         sssEmpLabel.setText(String.format("%.2f", sssEmp));
@@ -353,6 +364,23 @@ panel.add(totalRow);
 }
 
 
+ private String encodeImageToBase64(String imagePath) {
+    try {
+        Path path = Paths.get(imagePath);
+        byte[] imageBytes = Files.readAllBytes(path);
+        String base64 = Base64.getEncoder().encodeToString(imageBytes);
+        return "data:image/png;base64," + base64;
+    } catch (IOException e) {
+        e.printStackTrace();
+        return "";
+    }
+}
+ 
+ private double sssValue = 0.0;
+private double pagibigValue = 0.0;
+private double philhealthValue = 0.0;
+
+
 private void handleDownloadPayslip() {
     int selectedRow = table.getSelectedRow();
 
@@ -361,92 +389,177 @@ private void handleDownloadPayslip() {
         return;
     }
 
+    // === Get data from table ===
     String execId = model.getValueAt(selectedRow, 0).toString(); // ID NUMBER
     String name = model.getValueAt(selectedRow, 1).toString();   // EMPLOYEE NAME
-    String basicPay = model.getValueAt(selectedRow, 4).toString();
-    String allowance = model.getValueAt(selectedRow, 5).toString();
-    String refreshment = model.getValueAt(selectedRow, 6).toString();
-    String mins = model.getValueAt(selectedRow, 7).toString();
-    String absent = model.getValueAt(selectedRow, 9).toString();
-    String halfDay = model.getValueAt(selectedRow, 11).toString();
-    String otHours = model.getValueAt(selectedRow, 14).toString();
-    String otPay = model.getValueAt(selectedRow, 15).toString();
-    String netPay = model.getValueAt(selectedRow, 16).toString();
-    String workedDays = model.getValueAt(selectedRow, 17).toString();
+    double basicPay = Double.parseDouble(model.getValueAt(selectedRow, 4).toString());
+    double allowance = Double.parseDouble(model.getValueAt(selectedRow, 5).toString());
+    double execAllow = Double.parseDouble(model.getValueAt(selectedRow, 6).toString());
+    double mins = Double.parseDouble(model.getValueAt(selectedRow, 7).toString());
+    int absentDays = Integer.parseInt(model.getValueAt(selectedRow, 9).toString());
+    double halfDay = Double.parseDouble(model.getValueAt(selectedRow, 11).toString());
+    double otHours = Double.parseDouble(model.getValueAt(selectedRow, 14).toString());
+    double otPay = Double.parseDouble(model.getValueAt(selectedRow, 15).toString());
+    int workedDays = Integer.parseInt(model.getValueAt(selectedRow, 17).toString());
+    double dailyRate = Double.parseDouble(model.getValueAt(selectedRow, 18).toString());
     String payDate = model.getValueAt(selectedRow, 21).toString();
     String cutoffStart = model.getValueAt(selectedRow, 22).toString();
     String cutoffEnd = model.getValueAt(selectedRow, 23).toString();
     String payPeriod = cutoffStart + " - " + cutoffEnd;
 
-    String html = """
+    // === Get fixed deductions ===
+    double sss = sssValue;
+    double pagibig = pagibigValue;
+    double philhealth = philhealthValue;
+
+    // ✅ Get Total Absent Deduction from column 13
+    double absentDeduction = Double.parseDouble(model.getValueAt(selectedRow, 13).toString());
+
+    // ✅ Recalculate totals
+    double totalEarnings = basicPay + allowance + execAllow + otPay;
+    double totalDeductions = sss + pagibig + philhealth + absentDeduction;
+    double netPay = totalEarnings - totalDeductions;
+
+    // ✅ Update the Net Pay cell in the table (optional)
+    model.setValueAt(String.format("%.2f", netPay), selectedRow, 16); // Column 16 = NET PAY
+
+    // === Company Info ===
+    String tin, location;
+   if ("Inspire Next Global Inc.".equalsIgnoreCase(selectedCompany)) {
+    tin = "010-824-345-0000";
+    location = "PSE Tower One Bonifacio High Street 5th Ave. cor. 28th Street BGC, Taguig, Metro Manila";
+} else if ("Inspire Alliance Fund Group Inc.".equalsIgnoreCase(selectedCompany)) {
+    tin = "010-911-458-000";
+    location = "MAIN OFFICE: 6F Alliance Global Tower,\n11th Avenue\ncorner 36th St, Taguig,\nMetro Manila";
+} else if ("Inspire Holdings Incorporated".equalsIgnoreCase(selectedCompany)) {
+    tin = "660-605-053-00000";
+    location = "PSE Tower One Bonifacio High Street 5th Ave. cor. 28th Street BGC, Taguig, Metro Manila";
+} else {
+    tin = "123-456-789-000";
+    location = "123 Main St., Makati City, Philippines";
+}
+
+String logoUrl;
+
+if ("Inspire Next Global Inc.".equalsIgnoreCase(selectedCompany)) {
+    logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/inspirenextglobal.png");
+} else if ("Inspire Alliance Fund Group Inc.".equalsIgnoreCase(selectedCompany)) {
+    logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/inspirealliance.png");
+} else if ("Inspire Holdings Incorporated".equalsIgnoreCase(selectedCompany)) {
+    logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/inpireholding.png");
+} else {
+    logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/deepocean5.jpg");
+}
+    // Format HTML
+    String html = String.format("""
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Employee Payslip</title>
+<title>Payslip</title>
 <style>
-    body { font-family: Arial, sans-serif; margin: 40px auto; max-width: 800px; padding: 20px; }
-    .payslip { border: 1px solid #000; padding: 20px; }
-    .header { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-    .info-row { display: grid; grid-template-columns: 200px auto; margin-bottom: 10px; }
-    .info-label { font-weight: bold; }
-    .id-number { background-color: #e8f5e9; padding: 2px 5px; }
-    .main-table { width: 100%%; border-collapse: collapse; margin: 20px 0; }
-    .main-table th, .main-table td { border: 1px solid #000; padding: 8px; }
-    .earnings-col { width: 40%%; }
-    .amount-col { width: 10%%; text-align: right; }
-    .deductions-col { width: 40%%; }
-    .total-row { font-weight: bold; }
-    .signature-section { display: flex; justify-content: space-between; margin-top: 50px; }
-    .signature-line { border-top: 1px solid #000; width: 250px; text-align: center; padding-top: 5px; }
+    @page { margin: 2cm 3.18cm; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; color: #222; }
+    .company-branding {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 5px;
+    }
+    
+    .company-logo {
+        max-width: 50px;
+        height: auto;
+    }
+    
+    .company-name {
+        font-size: 18px;
+        font-weight: bold;
+    }
+    .company-info { text-align: center; font-size: 8px; color: #555; margin-bottom: 25px; }
+    .info-section { background-color: #f9f9f9; border: 1px solid #ccc; padding: 5px; border-radius: 6px; margin-bottom: 20px; }
+    .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 10px; font-size: 10px;}
+    .info-row { display: flex; gap: 5px; font-size: 9px;}
+    .label { font-weight: 600; min-width: 100px; color: #333; }
+    .value { color: #444; }
+    table { width: 100%%; border-collapse: collapse; margin-bottom: 10px; font-size: 10px; }
+    th, td { border: 1px solid #999; padding: 8px 12px; text-align: left;font-size: 10px; }
+    th { background-color: #e9e9e9; }
+    .summary-and-signatures { display: flex; justify-content: space-between; margin-top: 15px; gap: 15px;font-size: 10px; }
+    .net-summary { flex: 1; }
+    .signature-boxes { flex: 1; display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; text-align: center;font-size: 10px; }
+    .sig-box { margin-top: 30px; color: black;font-size: 10px; }
+    .sig-line { border-top: 1px solid #000; margin-top: 30px; padding-top: 5px; font-size: 13px; font-size: 10px;}
 </style>
 </head>
 <body>
-<div class="payslip">
-<div class="header">
-    <div>
-        <div class="info-row"><span class="info-label">Employee Name</span><span>%s</span></div>
-        <div class="info-row"><span class="info-label">ID No.</span><span class="id-number">%s</span></div>
-    </div>
-    <div>
-        <div class="info-row"><span class="info-label">Pay Date</span><span>%s</span></div>
-        <div class="info-row"><span class="info-label">Worked Days</span><span>%s</span></div>
-        <div class="info-row"><span class="info-label">Pay Period</span><span>%s</span></div>
+<div class="company-branding">
+    <img src="%s" alt="Company Logo" class="company-logo">
+    <div class="company-name">%s</div>
+</div>
+                                
+                                
+
+<div class="company-info">TIN: %s &nbsp; | &nbsp; Location: <span>%s</span></div>
+
+<div class="info-section">
+    <div class="info-grid">
+        <div class="info-row"><span class="label">Employee Name:</span><span class="value">%s</span></div>
+        <div class="info-row"><span class="label">Pay Date:</span><span class="value">%s</span></div>
+        <div class="info-row"><span class="label">Worked Days:</span><span class="value">%d</span></div>
+        <div class="info-row"><span class="label">Employee ID:</span><span class="value">%s</span></div>
+        <div class="info-row"><span class="label">Pay Period:</span><span class="value">%s</span></div>
     </div>
 </div>
 
-<table class="main-table">
-<tr>
-    <th class="earnings-col">Earnings</th><th class="amount-col">Amount</th>
-    <th class="deductions-col">Deductions</th><th class="amount-col">Amount</th>
-</tr>
-<tr><td>Basic Pay</td><td>%s</td><td>Absent</td><td>%s</td></tr>
-<tr><td>Allowance</td><td>%s</td><td>PagIbig</td><td>%s</td></tr>
-<tr><td>Refreshment</td><td>%s</td><td>PhilHealth</td><td>%s</td></tr>
-<tr><td>OT Hours</td><td>%s</td><td></td><td></td></tr>
-<tr><td>OT Pay</td><td>%s</td><td></td><td></td></tr>
-<tr class="total-row">
-    <td colspan="2">Net Pay</td><td colspan="2" style="text-align: right;">%s</td>
-</tr>
+<table>
+    <thead><tr><th colspan="2">Earnings</th></tr></thead>
+    <tr><td>Basic Pay</td><td>Php %.2f</td></tr>
+    <tr><td>Allowance</td><td>Php %.2f</td></tr>
+    <tr><td>Executive Allowance</td><td>Php %.2f</td></tr>
+    <tr><td>Overtime Pay</td><td>Php %.2f</td></tr>
+    <tr><th>Total Earnings</th><th>Php %.2f</th></tr>
 </table>
 
-<div class="signature-section">
-    <div class="signature-line">Employer Signature</div>
-    <div class="signature-line">Employee Signature</div>
+<table>
+    <thead><tr><th>Deduction</th><th>Amount</th></tr></thead>
+    <tr><td>SSS</td><td>Php %.2f</td></tr>
+    <tr><td>Pag-IBIG</td><td>Php %.2f</td></tr>
+    <tr><td>PhilHealth</td><td>Php %.2f</td></tr>
+
+    <tr><td>Absent Deduction (%d Day%s)</td><td>Php %.2f</td></tr>
+    <tr><th>Total Deductions</th><th>Php %.2f</th></tr>
+</table>
+
+<div class="summary-and-signatures">
+    <div class="signature-boxes">
+        <div class="sig-box"><div class="sig-line">CEO Signature</div></div>
+        <div class="sig-box"><div class="sig-line">President Signature</div></div>
+        <div class="sig-box"><div class="sig-line">Accounting Signature</div></div>
+        <div class="sig-box"><div class="sig-line">Employee Signature</div></div>
+    </div>
+
+    <table class="net-summary">
+        <thead><tr><th colspan="2">Net Pay Summary</th></tr></thead>
+        <tr><td>Gross Earnings</td><td>Php %.2f</td></tr>
+        <tr><td>Total Deductions</td><td>Php %.2f</td></tr>
+        <tr><th>Net Pay</th><th>Php %.2f</th></tr>
+    </table>
 </div>
-</div>
+
 </body>
 </html>
-""".formatted(
-        name, execId,
-        payDate, workedDays, payPeriod,
-        basicPay, absent,
-        allowance, halfDay,
-        refreshment, mins,
-        otHours, otPay,
-        netPay
+""",
+        logoUrl, selectedCompany, tin, location,
+        name, payDate, workedDays,
+        execId, payPeriod,
+        basicPay, allowance, execAllow, otPay, totalEarnings,
+        sss, pagibig, philhealth, absentDays, absentDays == 1 ? "" : "s", absentDeduction, totalDeductions,
+        totalEarnings, totalDeductions, netPay
     );
 
+    // Convert to PDF
     try {
         PdfShiftConverter converter = new PdfShiftConverter("sk_dc48b1f99bb971396765c80111f7d78e9e5fa723");
         converter.convertToPdfWithChooser(html);
@@ -593,32 +706,35 @@ private int countWeekdaysBetween(String start, String end) {
     }
 }
 
-    private void refreshTable(String monthFilter) {
-        model.setRowCount(0);
-        List<String[]> employeeData = EmployeeDataFetcher.fetchEmployeeData(monthFilter, this.selectedCompany);
-        for (String[] row : employeeData) {
-            model.addRow(row);
+   private void refreshTable(String monthFilter) {
+    model.setRowCount(0);
+
+    List<String[]> employeeData = EmployeeDataFetcher.fetchEmployeeData(monthFilter, this.selectedCompany);
+
+    for (String[] row : employeeData) {
+        model.addRow(row);
+    }
+
+    // Auto-fill the blank columns (Absent/half-day computation)
+    for (int i = 0; i < model.getRowCount(); i++) {
+        try {
+            BigDecimal dailyRate = new BigDecimal(model.getValueAt(i, 18).toString()); // daily
+            int absent = Integer.parseInt(model.getValueAt(i, 9).toString());           // absent days
+            int halfDay = Integer.parseInt(model.getValueAt(i, 11).toString());         // half-day count
+
+            BigDecimal absentAmount = dailyRate.multiply(BigDecimal.valueOf(absent)).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal halfDayAmount = dailyRate.divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP)
+                                                .multiply(BigDecimal.valueOf(halfDay))
+                                                .setScale(2, RoundingMode.HALF_UP);
+
+            model.setValueAt(absentAmount.toString(), i, 10);  // Computed absent amount
+            model.setValueAt(halfDayAmount.toString(), i, 12); // Computed half-day amount
+
+        } catch (Exception e) {
+            e.printStackTrace(); // silent fail per row
         }
-        // Auto-fill the blank columns
-        for (int i = 0; i < model.getRowCount(); i++) {
-    try {
-        BigDecimal dailyRate = new BigDecimal(model.getValueAt(i, 18).toString()); // assuming col 18 = daily
-        int absent = Integer.parseInt(model.getValueAt(i, 9).toString());
-        int halfDay = Integer.parseInt(model.getValueAt(i, 11).toString());
-
-        BigDecimal absentAmount = dailyRate.multiply(BigDecimal.valueOf(absent)).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal halfDayAmount = dailyRate.divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP)
-                                            .multiply(BigDecimal.valueOf(halfDay))
-                                            .setScale(2, RoundingMode.HALF_UP);
-
-        model.setValueAt(absentAmount.toString(), i, 10);  // Show computed absent value
-        model.setValueAt(halfDayAmount.toString(), i, 12); // Show computed half-day value
-
-    } catch (Exception e) {
-        e.printStackTrace(); // Fail silently for bad rows
     }
 }
-    }
 
    private void handleSaveChanges(ActionEvent e) {
     int selectedRow = table.getSelectedRow();
