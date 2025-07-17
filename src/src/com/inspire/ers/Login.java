@@ -134,7 +134,7 @@ public class Login extends JFrame {
         } 
         else if (username.equals(ADMIN_USERNAME) && password.equals(ADMIN_PASSWORD)) {
             // Show company selection dialog
-            String[] companies = {"IHI", "INGI", "INSPIRE ALLIANCE"};
+            String[] companies = {"Inspire Holdings Incorporated", "Inspire Next Global Inc.", "Inspire Alliance Fund Group Inc."};
             String selectedCompany = (String) JOptionPane.showInputDialog(
                 Login.this,
                 "Select Company:",
