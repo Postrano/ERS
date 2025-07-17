@@ -128,7 +128,7 @@ public class Login extends JFrame {
             JOptionPane.showMessageDialog(Login.this,
                 "Welcome, Super Admin!");
 
-            HomePage homePage = new HomePage("ALL"); // "ALL" signals super admin access
+            HomePage homePage = new HomePage("ALL", "Super Admin"); // "ALL" signals super admin access
             homePage.setVisible(true);
             dispose();
         } 
@@ -149,7 +149,7 @@ public class Login extends JFrame {
                 JOptionPane.showMessageDialog(Login.this,
                     "Welcome to " + selectedCompany + "!");
 
-                HomePage homePage = new HomePage(selectedCompany);
+                HomePage homePage = new HomePage(selectedCompany, "Admin");
                 homePage.setVisible(true);
                 dispose();
             } else {
