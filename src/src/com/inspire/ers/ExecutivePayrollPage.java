@@ -139,8 +139,8 @@ public class ExecutivePayrollPage extends JFrame {
         return count;
     }
 
-    private void loadPayrollData(java.sql.Date startDate, java.sql.Date endDate) {
-    tableModel.setRowCount(0);
+ private void loadPayrollData(java.sql.Date startDate, java.sql.Date endDate) {
+    tableModel.setRowCount(0); // Clear previous data
     int totalWorkingDays = countWeekdaysBetween(startDate, endDate);
 
     String sql = "SELECT ei.exec_id, ei.name, ei.basic_pay, ei.allowance, " +
@@ -162,35 +162,37 @@ public class ExecutivePayrollPage extends JFrame {
         stmt.setString(3, selectedCompany);
 
         ResultSet rs = stmt.executeQuery();
+
         while (rs.next()) {
+            // Basic employee info
             String execId = rs.getString("exec_id");
             String name = rs.getString("name");
             int totalPresent = rs.getInt("total_present");
             int totalAbsent = rs.getInt("total_absent");
 
+            // Compensation
             double basicPay = roundTwoDecimals(rs.getDouble("basic_pay"));
             double allowance = roundTwoDecimals(rs.getDouble("allowance"));
             double marketing = roundTwoDecimals(rs.getDouble("marketing_allowance"));
             double executive = roundTwoDecimals(rs.getDouble("executive_allowance"));
 
-            int totalDays = totalPresent + totalAbsent;
+            // Daily computation
             double dailyRate = totalWorkingDays > 0 ? basicPay / totalWorkingDays : 0;
             double absentDeduction = totalAbsent * dailyRate;
 
-            // Earnings
+            // Gross earnings
             double grossEarnings = (dailyRate * totalPresent) + allowance + marketing + executive;
 
-            // PhilHealth: 5% split (2.5% employee)
+            // Government deductions - employee share
             double philhealthEmp = roundTwoDecimals(basicPay * 0.025);
             double philhealthEr = roundTwoDecimals(basicPay * 0.025);
 
-            // SSS: 15% split + 10/30 to employer
             double sssEmp = roundTwoDecimals(basicPay * 0.05);
             double sssEr = roundTwoDecimals(basicPay * 0.10 + (basicPay <= 14000 ? 10 : 30));
 
-            // Pag-IBIG based on range
             double pagibigEmp;
             double pagibigEr;
+
             if (basicPay <= 1500) {
                 pagibigEmp = roundTwoDecimals(basicPay * 0.01);
                 pagibigEr = roundTwoDecimals(basicPay * 0.02);
@@ -201,32 +203,38 @@ public class ExecutivePayrollPage extends JFrame {
                 pagibigEmp = roundTwoDecimals(basicPay * 0.01);
                 pagibigEr = roundTwoDecimals(basicPay * 0.02);
             }
+            
+            double totalcontribution = sssEmp + philhealthEmp + pagibigEmp;
+            
+            
+            System.out.println("totalcontribution");
+            
+            // Taxable income
+            double taxableIncome = basicPay - totalcontribution;
 
-            // Taxable Income = gross - absents - contributions (employee)
-            double taxableIncome = grossEarnings - absentDeduction - sssEmp - philhealthEmp - pagibigEmp;
-
+            // BIR Withholding Tax - MONTHLY (based on tax table you provided)
             double birTax;
             if (taxableIncome <= 20833) {
                 birTax = 0;
             } else if (taxableIncome <= 33332) {
                 birTax = (taxableIncome - 20833) * 0.15;
             } else if (taxableIncome <= 66666) {
-                birTax = 1875 + (taxableIncome - 33333) * 0.20;
+                birTax = 2500 + (taxableIncome - 33333) * 0.20;
             } else if (taxableIncome <= 166666) {
-                birTax = 8541.80 + (taxableIncome - 66667) * 0.25;
+                birTax = 10833.33 + (taxableIncome - 66667) * 0.25;
             } else if (taxableIncome <= 666666) {
-                birTax = 33541.80 + (taxableIncome - 166667) * 0.30;
+                birTax = 40833.33 + (taxableIncome - 166667) * 0.30;
             } else {
-                birTax = 183541.80 + (taxableIncome - 666666) * 0.35;
+                birTax = 200833.33 + (taxableIncome - 666667) * 0.35;
             }
+
             birTax = roundTwoDecimals(birTax);
 
-            // Final totalBasicPay = gross earnings
+            // Final computations
             double totalBasicPay = roundTwoDecimals(grossEarnings);
-
-            // Employee-only deductions
             double totalDeduction = roundTwoDecimals(sssEmp + pagibigEmp + philhealthEmp + birTax);
 
+            // Add to table
             tableModel.addRow(new Object[]{
                 execId,
                 name,
@@ -351,13 +359,13 @@ public class ExecutivePayrollPage extends JFrame {
         String tin;
         String location;
 
-if ("INGI".equalsIgnoreCase(selectedCompany)) {
+if ("Inspire Next Global Inc.".equalsIgnoreCase(selectedCompany)) {
     tin = "010-824-345-0000";
     location = "PSE Tower One Bonifacio High Street 5th Ave. cor. 28th Street BGC, Taguig, Metro Manila";
-} else if ("INSPIRE ALLIANCE".equalsIgnoreCase(selectedCompany)) {
+} else if ("Inspire Alliance Fund Group Inc.".equalsIgnoreCase(selectedCompany)) {
     tin = "010-911-458-000";
     location = "MAIN OFFICE: 6F Alliance Global Tower,\n11th Avenue\ncorner 36th St, Taguig,\nMetro Manila";
-} else if ("IHI".equalsIgnoreCase(selectedCompany)) {
+} else if ("Inspire Holdings Incorporated".equalsIgnoreCase(selectedCompany)) {
     tin = "660-605-053-00000";
     location = "PSE Tower One Bonifacio High Street 5th Ave. cor. 28th Street BGC, Taguig, Metro Manila";
 } else {
@@ -367,11 +375,11 @@ if ("INGI".equalsIgnoreCase(selectedCompany)) {
 
 String logoUrl;
 
-if ("INGI".equalsIgnoreCase(selectedCompany)) {
+if ("Inspire Next Global Inc.".equalsIgnoreCase(selectedCompany)) {
     logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/inspirenextglobal.png");
-} else if ("INSPIRE ALLIANCE".equalsIgnoreCase(selectedCompany)) {
+} else if ("Inspire Alliance Fund Group Inc.".equalsIgnoreCase(selectedCompany)) {
     logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/inspirealliance.png");
-} else if ("IHI".equalsIgnoreCase(selectedCompany)) {
+} else if ("Inspire Holdings Incorporated".equalsIgnoreCase(selectedCompany)) {
     logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/inpireholding.png");
 } else {
     logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/deepocean5.jpg");
@@ -423,17 +431,20 @@ if ("INGI".equalsIgnoreCase(selectedCompany)) {
             padding: 5px;
             border-radius: 6px;
             margin-bottom: 20px;
+                 font-size: 10px;
         }
     
         .info-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 10px 10px;
+                 font-size: 10px;
         }
     
         .info-row {
             display: flex;
             gap: 5px;
+                 font-size: 10px;
         }
     
         .label {
@@ -449,77 +460,82 @@ if ("INGI".equalsIgnoreCase(selectedCompany)) {
         table {
             width: 100%%;
             border-collapse: collapse;
-            margin-bottom: 10px;
-            font-size: 14px;
+            margin-bottom: 5px;
+            font-size: 10px;
         }
     
         th, td {
             border: 1px solid #999;
             padding: 8px 12px;
             text-align: left;
+                 font-size: 10px;
+               
         }
     
         th {
             background-color: #e9e9e9;
+                 font-size: 10px;
         }
     
         .summary-and-signatures {
             display: flex;
             justify-content: space-between;
-            margin-top: 25px;
+            margin-top: 10px;
             gap: 30px;
+                 font-size: 10px;
         }
     
         .net-summary {
             flex: 1;
+                 font-size: 10px;
         }
     
         .signature-boxes {
             flex: 1;
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
+            gap: 10px;
             text-align: center;
+                 font-size: 10px;
         }
     
         .sig-box {
-            margin-top: 50px;
+            margin-top: 30px;
             color: black;
         }
     
         .sig-line {
             border-top: 1px solid #000;
-            margin-top: 50px;
+            margin-top: 30px;
             padding-top: 5px;
-            font-size: 13px;
+            font-size: 10px;
         }
                  
-                 .company-header-wrapper {
-                     display: flex;
-                     gap:5px;
-                     align-items: center;
-                     margin-bottom: 5px;
-                  text-align: center;
-                 }
-                 
-                 .company-logo img {
-                     height: 60px; /* Adjust size as needed */
-                 }
-                 
-                 .company-name {
-                     font-size: 24px;
-                     font-weight: bold;
-                  text-align: center;
-                 }
+                  .company-branding {
+                         display: flex;
+                         align-items: center;
+                         justify-content: center;
+                         gap: 15px;
+                         margin-bottom: 5px;
+                     }
+                     
+                     .company-logo {
+                         max-width: 50px;
+                         height: auto;
+                     }
+                     
+                     .company-name {
+                         font-size: 18px;
+                         font-weight: bold;
+                     }
     </style>
 </head>
 <body>
-    <div class="company-header-wrapper">
-        <div class="company-logo">
-            <img src="%s" alt="Company Logo">
-        </div>
-        <div class="company-name">%s</div>
-    </div>
+   <div class="company-branding">
+       <img src="%s" alt="Company Logo" class="company-logo">
+       <div class="company-name">%s</div>
+   </div>
+                 
        <div class="company-info">
            TIN: %s &nbsp; | &nbsp; Location: <span>%s</span>
        </div>

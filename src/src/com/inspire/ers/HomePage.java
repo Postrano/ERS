@@ -14,7 +14,7 @@ public class HomePage extends JFrame {
     private JPanel mainPanel;
     private String selectedCompany;
 
-    public HomePage(String company) {
+    public HomePage(String company, String role) {
         this.selectedCompany = company;
         setTitle("INSPIRE EMPLOYEE RECORDS SYSTEM - " + company);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -122,9 +122,16 @@ public class HomePage extends JFrame {
         });
         
         finalPayrollBtn.addActionListener(e -> {
-            FinalPayrollPage finalPayrollPage = new FinalPayrollPage(selectedCompany);
-            finalPayrollPage.setVisible(true);
-        });
+    if ("ALL".equalsIgnoreCase(selectedCompany)) {
+        // Super Admin can view all payroll
+        FinalPayrollPage finalPayrollPage = new FinalPayrollPage("ALL"); 
+        finalPayrollPage.setVisible(true);
+    } else {
+        // Regular admin can view only their company payroll
+        FinalPayrollPage finalPayrollPage = new FinalPayrollPage(selectedCompany);
+        finalPayrollPage.setVisible(true);
+    }
+});
 
         // Unified filter logic for both position and search
 KeyAdapter keyListener = new KeyAdapter() {
@@ -306,7 +313,7 @@ if ("ALL".equalsIgnoreCase(selectedCompany)) {
         }
 
         SwingUtilities.invokeLater(() -> {
-            new HomePage("IHI").setVisible(true);
+            new HomePage("IHI", "Super Admin").setVisible(true);
         });
     }
 }
