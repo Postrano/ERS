@@ -499,55 +499,11 @@ if ("Inspire Next Global Inc.".equalsIgnoreCase(selectedCompany)) {
     logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/deepocean5.jpg");
 }
     // Format HTML
-    String html = String.format("""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Payslip</title>
-<style>
-    @page { margin: 2cm 3.18cm; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; color: #222; }
-    .company-branding {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 15px;
-        margin-bottom: 5px;
-    }
-    
-    .company-logo {
-        max-width: 50px;
-        height: auto;
-    }
-    
-    .company-name {
-        font-size: 18px;
-        font-weight: bold;
-    }
-    .company-info { text-align: center; font-size: 8px; color: #555; margin-bottom: 25px; }
-    .info-section { background-color: #f9f9f9; border: 1px solid #ccc; padding: 5px; border-radius: 6px; margin-bottom: 20px; }
-    .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 10px; font-size: 10px;}
-    .info-row { display: flex; gap: 5px; font-size: 9px;}
-    .label { font-weight: 600; min-width: 100px; color: #333; }
-    .value { color: #444; }
-    table { width: 100%%; border-collapse: collapse; margin-bottom: 10px; font-size: 10px; }
-    th, td { border: 1px solid #999; padding: 8px 12px; text-align: left;font-size: 10px; }
-    th { background-color: #e9e9e9; }
-    .summary-and-signatures { display: flex; justify-content: space-between; margin-top: 15px; gap: 15px;font-size: 10px; }
-    .net-summary { flex: 1; }
-    .signature-boxes { flex: 1; display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; text-align: center;font-size: 10px; }
-    .sig-box { margin-top: 30px; color: black;font-size: 10px; }
-    .sig-line { border-top: 1px solid #000; margin-top: 30px; padding-top: 5px; font-size: 13px; font-size: 10px;}
-</style>
-</head>
-<body>
+String singlePayslip = String.format("""
 <div class="company-branding">
     <img src="%s" alt="Company Logo" class="company-logo">
     <div class="company-name">%s</div>
 </div>
-                                
-                                
 
 <div class="company-info">TIN: %s &nbsp; | &nbsp; Location: <span>%s</span></div>
 
@@ -562,50 +518,120 @@ if ("Inspire Next Global Inc.".equalsIgnoreCase(selectedCompany)) {
 </div>
 
 <table>
-    <thead><tr><th colspan="2">Earnings</th></tr></thead>
-    <tr><td>Basic Pay</td><td>Php %.2f</td></tr>
-    <tr><td>Allowance</td><td>Php %.2f</td></tr>
-    <tr><td>Executive Allowance</td><td>Php %.2f</td></tr>
-    <tr><td>Overtime Pay</td><td>Php %.2f</td></tr>
-    <tr><th>Total Earnings</th><th>Php %.2f</th></tr>
+  <tr>
+    <td>Basic Pay</td><td>Php %.2f</td>
+    <td>Allowance</td><td>Php %.2f</td>
+    <td>Executive Allowance</td><td>Php %.2f</td>
+    <td>MEMO</td>
+  </tr>
+  <tr>
+    <td>Overtime Pay</td><td>Php %.2f</td>
+    <td>Cash Advance</td><td>Php 0.00</td>
+    <td>Bonus</td><td>Php 0.00</td>
+    <td></td>
+  </tr>
+  <tr><td></td><td>0</td><td></td><td>0</td><td></td><td>0</td><td></td></tr>
+  <tr><td></td><td>0</td><td></td><td>0</td><td></td><td>0</td><td></td></tr>
+  <tr><td colspan="7" style="text-align: right; font-weight: bold;">Total: Php %.2f</td></tr>
 </table>
 
 <table>
-    <thead><tr><th>Deduction</th><th>Amount</th></tr></thead>
-    <tr><td>SSS</td><td>Php %.2f</td></tr>
-    <tr><td>Pag-IBIG</td><td>Php %.2f</td></tr>
-    <tr><td>PhilHealth</td><td>Php %.2f</td></tr>
-
-    <tr><td>Absent Deduction (%d Day%s)</td><td>Php %.2f</td></tr>
-    <tr><th>Total Deductions</th><th>Php %.2f</th></tr>
+  <tr>
+    <td>SSS</td><td>Php %.2f</td>
+    <td>Pag-IBIG</td><td>Php %.2f</td>
+    <td>PhilHealth</td><td>Php %.2f</td>
+    <td>MEMO</td>
+  </tr>
+  <tr>
+    <td>Absent Day%s</td><td>%d</td>
+    <td>Absent Deduction</td><td>Php %.2f</td>
+    <td></td><td>0</td>
+    <td></td>
+  </tr>
+  <tr><td></td><td>0</td><td></td><td>0</td><td></td><td>0</td><td></td></tr>
+  <tr><td></td><td>0</td><td></td><td>0</td><td></td><td>0</td><td></td></tr>
+  <tr><td colspan="7" style="text-align: right; font-weight: bold;">Total Deductions: Php %.2f</td></tr>
 </table>
 
 <div class="summary-and-signatures">
+    <table class="signature-table">   
+        <tr>
+            <th><div class="sig-line">CEO Signature</div></th>
+            <th><div class="sig-line">President Signature</div></th>
+            <th><div class="sig-line">Accounting Signature</div></th>
+        </tr>
+    </table>            
     <div class="signature-boxes">
-        <div class="sig-box"><div class="sig-line">CEO Signature</div></div>
-        <div class="sig-box"><div class="sig-line">President Signature</div></div>
-        <div class="sig-box"><div class="sig-line">Accounting Signature</div></div>
         <div class="sig-box"><div class="sig-line">Employee Signature</div></div>
     </div>
-
     <table class="net-summary">
-        <thead><tr><th colspan="2">Net Pay Summary</th></tr></thead>
-        <tr><td>Gross Earnings</td><td>Php %.2f</td></tr>
-        <tr><td>Total Deductions</td><td>Php %.2f</td></tr>
         <tr><th>Net Pay</th><th>Php %.2f</th></tr>
     </table>
 </div>
+""",
+    logoUrl, selectedCompany, tin, location,
+    name, payDate, workedDays,
+    execId, payPeriod,
+    basicPay, allowance, execAllow, otPay,
+    totalEarnings,
+    sss, pagibig, philhealth,
+    absentDays == 1 ? "" : "s",
+    absentDays,
+    absentDeduction,
+    totalDeductions,
+    netPay
+);
+
+String html = String.format("""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Payslip</title>
+<style>
+    @page { margin: 2cm 3.18cm; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; color: #222; }
+    .company-branding {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        margin-bottom: 5px;
+    }
+    .company-logo { max-width: 50px; height: auto; }
+    .company-name { font-size: 18px; font-weight: bold; }
+    .company-info { text-align: center; font-size: 8px; color: #555; margin-bottom: 5px; }
+    .info-section { background-color: #f9f9f9; border: 1px solid #ccc; padding: 5px; border-radius: 6px; margin-bottom: 5px; }
+    .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px 5px; font-size: 8px; }
+    .info-row { display: flex; gap: 5px; font-size: 8px; }
+    .label { font-weight: 600; min-width: 100px; color: #333; }
+    .value { color: #444; }
+    table { width: 100%%; border-collapse: collapse; margin-bottom: 5px; font-size: 8px; }
+    th, td { border: 1px solid #999; padding: 5px 5px; text-align: left; font-size: 8px; }
+    th { background-color: #e9e9e9; }
+    .summary-and-signatures { display: flex; justify-content: space-between; margin-top: 5px; gap: 5px; font-size: 5px;}
+    .net-summary { flex: 1; width: 20px;}
+    .signature-boxes { flex: 1;  grid-template-columns: repeat(2, 1fr); gap: 5px; text-align: center; font-size: 10px; }
+    .sig-box { margin-top: 50px; color: black; font-size: 5px; }
+    .sig-line { border-top: 1px solid #000; margin-top: 5px; padding-top: 5px; font-size: 8px; width: 100px;}
+    .signature-table th { padding-top: 45px; text-align: center; border-top: 1px solid #000;}
+    .signature-table { width: 50px; }
+    .net-summary { width: 20px; }
+</style>
+</head>
+<body>
+
+<div class="payslip">%s</div>
+
+<hr style="margin: 30px 0; border: dashed 1px #ccc;">
+
+<div class="payslip">%s</div>
 
 </body>
 </html>
-""",
-        logoUrl, selectedCompany, tin, location,
-        name, payDate, workedDays,
-        execId, payPeriod,
-        basicPay, allowance, execAllow, otPay, totalEarnings,
-        sss, pagibig, philhealth, absentDays, absentDays == 1 ? "" : "s", absentDeduction, totalDeductions,
-        totalEarnings, totalDeductions, netPay
-    );
+""", singlePayslip, singlePayslip);
+
+
 
     // Convert to PDF
     try {

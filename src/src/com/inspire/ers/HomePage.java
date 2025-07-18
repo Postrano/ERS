@@ -63,6 +63,7 @@ public class HomePage extends JFrame {
         leftPanel.add(executiveBtn);
         leftPanel.add(addEmployeeBtn);
         leftPanel.add(finalPayrollBtn);
+        leftPanel.add(timeKeepingBtn);
 
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         rightPanel.setBackground(topPanel.getBackground());
