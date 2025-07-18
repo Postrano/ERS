@@ -7,6 +7,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import src.com.inspire.ers.DBUtil;
+import javax.swing.border.TitledBorder;
+
 
 
 import java.io.File;
@@ -17,6 +19,12 @@ public class EmployeeForm extends JFrame {
     private Employee employee;
     private boolean isEditing;
     private String selectedCompany;
+    
+    private final Color backgroundColor = new Color(13, 27, 42);
+    private final Color panelColor = new Color(33, 45, 65);
+    private final Color labelColor = Color.WHITE;
+    private final Font labelFont = new Font("Segoe UI", Font.PLAIN, 13);
+    private final Font titleFont = new Font("Segoe UI", Font.BOLD, 14);
 
     // UI Components
     private JTextField firstNameField, lastNameField, middleNameField, idNumberField, emailField;
@@ -36,6 +44,14 @@ public class EmployeeForm extends JFrame {
         form.selectedCompany = selectedCompany;
         return form;
     }
+    
+    private JLabel createStyledLabel(String text) {
+    JLabel label = new JLabel(text);
+    label.setFont(labelFont);
+    label.setForeground(labelColor);
+    return label;
+}
+
 
     // Constructor for editing or creating employee
         public EmployeeForm(HomePage homePage, Employee employee, String selectedCompany) {
@@ -54,37 +70,57 @@ public class EmployeeForm extends JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
        // Use BorderLayout for main container
-        JPanel mainPanel = new JPanel(new BorderLayout());
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBackground(backgroundColor);
         mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 30));
 
         // --- Image Panel (LEFT side) ---
-        JPanel imagePanelWrapper = new JPanel();
-        imagePanelWrapper.setLayout(new BorderLayout());
-        imagePanelWrapper.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 30));
-        
-        JPanel imagePanel = new JPanel();
-        imagePanel.setLayout(new BoxLayout(imagePanel, BoxLayout.Y_AXIS));
-        imagePanel.setAlignmentY(Component.TOP_ALIGNMENT); // Not RIGHT_ALIGNMENT
+        // --- Image Panel (LEFT side) ---
+JPanel imagePanelWrapper = new JPanel();
+imagePanelWrapper.setLayout(new BorderLayout());
+imagePanelWrapper.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 30));
+imagePanelWrapper.setBackground(panelColor); // Set dark background
 
-        imageLabel = new JLabel("No Image");
-        imageLabel.setPreferredSize(new Dimension(150, 150));
-        imageLabel.setMaximumSize(new Dimension(150, 150));
-        imageLabel.setBorder(BorderFactory.createLineBorder(Color.GRAY));
-        imageLabel.setAlignmentX(Component.CENTER_ALIGNMENT); // Center inside imagePanel
+JPanel imagePanel = new JPanel();
+imagePanel.setLayout(new BoxLayout(imagePanel, BoxLayout.Y_AXIS));
+imagePanel.setAlignmentY(Component.TOP_ALIGNMENT);
+imagePanel.setBackground(panelColor); // Match rest of form
 
-        uploadButton = new JButton("Upload Image");
-        uploadButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        uploadButton.addActionListener(e -> selectImage());
+imageLabel = new JLabel("No Image");
+imageLabel.setPreferredSize(new Dimension(150, 150));
+imageLabel.setMaximumSize(new Dimension(150, 150));
+imageLabel.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+imageLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+imageLabel.setVerticalAlignment(SwingConstants.CENTER);
+imageLabel.setOpaque(true); // Make background visible
+imageLabel.setBackground(panelColor); // Match background
+imageLabel.setForeground(Color.WHITE); // Text color
 
-        imagePanel.add(imageLabel);
-        imagePanel.add(Box.createVerticalStrut(10));
-        imagePanel.add(uploadButton);
-        imagePanelWrapper.add(imagePanel, BorderLayout.NORTH);
+uploadButton = new JButton("Upload Image");
+uploadButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+uploadButton.setBackground(new Color(55, 71, 100)); // A bold blue
+uploadButton.setForeground(Color.WHITE);
+uploadButton.setFocusPainted(false);
+uploadButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
+uploadButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+uploadButton.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
+uploadButton.addActionListener(e -> selectImage());
+
+imagePanel.add(imageLabel);
+imagePanel.add(Box.createVerticalStrut(10));
+imagePanel.add(uploadButton);
+imagePanelWrapper.add(imagePanel, BorderLayout.NORTH);
+
 
         
         // Employee Profile Section
         JPanel profilePanel = new JPanel(new GridLayout(0, 2, 10, 10));
         profilePanel.setBorder(BorderFactory.createTitledBorder("EMPLOYEE PROFILE"));
+        TitledBorder profileBorder = BorderFactory.createTitledBorder("EMPLOYEE PROFILE");
+        profileBorder.setTitleColor(Color.WHITE); // ✅ make title text white
+        profilePanel.setBorder(profileBorder);
+        profilePanel.setBackground(panelColor);
 
         firstNameField  = new JTextField(20);
         lastNameField   = new JTextField(20);
@@ -100,26 +136,29 @@ public class EmployeeForm extends JFrame {
         addressField   = new JTextField(20);
         cellphoneField = new JTextField(20);
         
-        profilePanel.add(new JLabel("First Name"));
+        profilePanel.add(createStyledLabel("First Name"));
         profilePanel.add(firstNameField);
-        profilePanel.add(new JLabel("Last Name"));
+        profilePanel.add(createStyledLabel("Last Name"));
         profilePanel.add(lastNameField);
-        profilePanel.add(new JLabel("Middle Name"));
+        profilePanel.add(createStyledLabel("Middle Name"));
         profilePanel.add(middleNameField);
-        profilePanel.add(new JLabel("ID Number"));
+        profilePanel.add(createStyledLabel("ID Number"));
         profilePanel.add(idNumberField);
-        profilePanel.add(new JLabel("Date Hired"));
+        profilePanel.add(createStyledLabel("Date Hired"));
         profilePanel.add(dateHiredSpinner);
-        profilePanel.add(new JLabel("Email Address"));
+        profilePanel.add(createStyledLabel("Email Address"));
         profilePanel.add(emailField);
-        profilePanel.add(new JLabel("Current Address"));
+        profilePanel.add(createStyledLabel("Current Address"));
         profilePanel.add(addressField);
-        profilePanel.add(new JLabel("Cellphone No."));
+        profilePanel.add(createStyledLabel("Cellphone No."));
         profilePanel.add(cellphoneField);
 
         // Salary Panel
         JPanel salaryPanel = new JPanel(new GridLayout(0, 2, 10, 10));
-        salaryPanel.setBorder(BorderFactory.createTitledBorder("SALARY"));
+        TitledBorder salaryBorder = BorderFactory.createTitledBorder("SALARY");
+        salaryBorder.setTitleColor(Color.WHITE); // ✅ make title text white
+        salaryPanel.setBorder(salaryBorder);
+        salaryPanel.setBackground(panelColor);
 
         positionField           = new JTextField(20);
         basicPayField           = new JTextField(20);
@@ -127,20 +166,23 @@ public class EmployeeForm extends JFrame {
         marketingAllowanceField = new JTextField(20);
         monthlySalaryField      = new JTextField(20);
 
-        salaryPanel.add(new JLabel("Position"));
+        salaryPanel.add(createStyledLabel("Position"));
         salaryPanel.add(positionField);
-        salaryPanel.add(new JLabel("Basic Pay"));
+        salaryPanel.add(createStyledLabel("Basic Pay"));
         salaryPanel.add(basicPayField);
-        salaryPanel.add(new JLabel("Executive Allowance"));
+        salaryPanel.add(createStyledLabel("Executive Allowance"));
         salaryPanel.add(execAllowanceField);
-        salaryPanel.add(new JLabel("Marketing/Transpo Allowance"));
+        salaryPanel.add(createStyledLabel("Marketing/Transpo Allowance"));
         salaryPanel.add(marketingAllowanceField);
-        salaryPanel.add(new JLabel("Monthly Salary"));
+        salaryPanel.add(createStyledLabel("Monthly Salary"));
         salaryPanel.add(monthlySalaryField);
 
         // Benefits Panel
         JPanel benefitsPanel = new JPanel(new GridLayout(0, 2, 10, 10));
-        benefitsPanel.setBorder(BorderFactory.createTitledBorder("BENEFITS"));
+        TitledBorder benefitsBorder = BorderFactory.createTitledBorder("BENEFITS");
+        benefitsBorder.setTitleColor(Color.WHITE); // ✅ make title text white
+        benefitsPanel.setBorder(benefitsBorder);
+        benefitsPanel.setBackground(panelColor);
 
         sssField         = new JTextField(20);
         philHealthField  = new JTextField(20);
@@ -148,15 +190,15 @@ public class EmployeeForm extends JFrame {
         tinField         = new JTextField(20);
         bankAccountField = new JTextField(20);
 
-        benefitsPanel.add(new JLabel("SSS Number"));
+        benefitsPanel.add(createStyledLabel("SSS Number"));
         benefitsPanel.add(sssField);
-        benefitsPanel.add(new JLabel("PhilHealth Number"));
+        benefitsPanel.add(createStyledLabel("PhilHealth Number"));
         benefitsPanel.add(philHealthField);
-        benefitsPanel.add(new JLabel("Pag-IBIG Number"));
+        benefitsPanel.add(createStyledLabel("Pag-IBIG Number"));
         benefitsPanel.add(pagIbigField);
-        benefitsPanel.add(new JLabel("TIN Number"));
+        benefitsPanel.add(createStyledLabel("TIN Number"));
         benefitsPanel.add(tinField);
-        benefitsPanel.add(new JLabel("Bank Account"));
+        benefitsPanel.add(createStyledLabel("Bank Account"));
         benefitsPanel.add(bankAccountField);
         
         // --- CENTER SIDE: Fields Panel ---
@@ -171,9 +213,13 @@ public class EmployeeForm extends JFrame {
         fieldsPanel.add(Box.createVerticalStrut(20));
         fieldsPanel.add(benefitsPanel);
         fieldsPanel.add(Box.createVerticalStrut(20));
+        fieldsPanel.setBackground(panelColor); // or whatever dark color you're using
+
 
         // Submit Button
         JButton submitButton = new JButton("SUBMIT");
+        submitButton.setBackground(new Color(55, 71, 100));
+        submitButton.setForeground(labelColor);
         submitButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         submitButton.addActionListener(e -> {
             if (validateForm()) {
@@ -183,7 +229,8 @@ public class EmployeeForm extends JFrame {
         });
 
   
-        fieldsPanel.add(submitButton); // Add it to the fields panel instead of mainPanel
+        fieldsPanel.add(submitButton);
+        fieldsPanel.add(Box.createVerticalStrut(20)); // 20px bottom margin// Add it to the fields panel instead of mainPanel
 
         mainPanel.add(imagePanelWrapper, BorderLayout.WEST);
         mainPanel.add(fieldsPanel, BorderLayout.CENTER);

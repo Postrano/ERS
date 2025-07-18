@@ -187,8 +187,7 @@ class ButtonEditor extends DefaultCellEditor {
 private boolean philHealthSelected = false;
 private boolean pagibigSelected = false;
 
-
-    private void showBenefitsDialog() {
+private void showBenefitsDialog() {
     int row = table.getSelectedRow();
     if (row == -1) return;
 
@@ -217,19 +216,24 @@ private boolean pagibigSelected = false;
     JLabel pagibigEeLabel = new JLabel("0.00");
     JLabel pagibigTotalLabel = new JLabel("0.00");
 
+    JLabel birTaxLabel = new JLabel("0.00");
+    JLabel netPayLabel = new JLabel("0.00");
+    JLabel totalEmployeeContributionLabel = new JLabel("0.00");
     JLabel totalContributionLabel = new JLabel("0.00");
 
-    // Compute function
     Runnable compute = () -> {
-        // Save current states to fields
+        // Update selection states
         sssSelected = sssCheckbox.isSelected();
         philHealthSelected = philHealthCheckbox.isSelected();
         pagibigSelected = pagibigCheckbox.isSelected();
 
-        double sssEmp = 0, sssEe = 0, sssTotal = 0;
-        double philEmp = 0, philEe = 0, philTotal = 0;
-        double pagibigEmp = 0, pagibigEe = 0, pagibigTotal = 0;
+        // Declare deductions
+        double sssTotal = 0, sssEmp = 0, sssEe = 0;
+        double philTotal = 0, philEmp = 0, philEe = 0;
+        double pagibigTotal = 0, pagibigEmp = 0, pagibigEe = 0;
+        double birTax = 0;
 
+        // === SSS Calculation ===
         if (sssSelected) {
             sssTotal = basic * 0.15;
             sssEmp = basic * 0.10;
@@ -243,30 +247,50 @@ private boolean pagibigSelected = false;
             }
         }
 
+        // === PhilHealth Calculation ===
         if (philHealthSelected) {
-            philTotal = basic * 0.05;
-            philEmp = philTotal / 2;
-            philEe = philTotal / 2;
-        }
+    philTotal = basic * 0.05;
+    philEmp = philTotal / 2;
+    philEe = philTotal / 2;
+}
 
+        // === Pag-IBIG Calculation ===
         if (pagibigSelected) {
-            if (basic <= 1500) {
-                pagibigEmp = basic * 0.02;
-                pagibigEe = basic * 0.01;
-            } else if (basic >= 10000) {
-                pagibigEmp = basic * 0.02;
-                pagibigEe = basic * 0.02;
-            }
+            double pagibigBase = Math.min(basic, 10000);
+            pagibigEmp = pagibigBase * 0.02;
+            pagibigEe = pagibigBase * 0.02;
             pagibigTotal = pagibigEmp + pagibigEe;
         }
+
+        // === Total Employee Deductions Only ===
+        double totalDeductions = sssEe + philEe + pagibigEe;
         
-         // Set values to class-level fields (used in payslip)
-       sssValue = sssEe;
-philhealthValue = philEe;
-pagibigValue = pagibigEe;
+        double totalEmployeeContribution = sssEe + philEe + pagibigEe;
+totalEmployeeContributionLabel.setText(String.format("%.2f", totalEmployeeContribution));
 
 
-        // Update labels
+        // === BIR Tax ===
+        // === BIR Tax ===
+double taxableIncome = basic - totalDeductions;
+if (taxableIncome <= 20833) {
+    birTax = 0;
+} else if (taxableIncome <= 33332) {
+    birTax = (taxableIncome - 20833) * 0.15;
+} else if (taxableIncome <= 66666) {
+    birTax = 2500 + (taxableIncome - 33333) * 0.20;
+} else if (taxableIncome <= 166666) {
+    birTax = 10833.33 + (taxableIncome - 66667) * 0.25;
+} else if (taxableIncome <= 666666) {
+    birTax = 40833.33 + (taxableIncome - 166667) * 0.30;
+} else {
+    birTax = 200833.33 + (taxableIncome - 666667) * 0.35;
+}
+
+
+        // === Net Pay ===
+        double netPay = basic - totalDeductions - birTax;
+
+        // === Set Labels ===
         sssEmpLabel.setText(String.format("%.2f", sssEmp));
         sssEeLabel.setText(String.format("%.2f", sssEe));
         sssTotalLabel.setText(String.format("%.2f", sssTotal));
@@ -279,6 +303,14 @@ pagibigValue = pagibigEe;
         pagibigEeLabel.setText(String.format("%.2f", pagibigEe));
         pagibigTotalLabel.setText(String.format("%.2f", pagibigTotal));
 
+        if (birTax == 0) {
+    birTaxLabel.setText("0 - Tax Exempted");
+} else {
+    birTaxLabel.setText(String.format("%.2f", birTax));
+}
+
+        netPayLabel.setText(String.format("%.2f", netPay));
+
         double total = sssTotal + philTotal + pagibigTotal;
         totalContributionLabel.setText(String.format("%.2f", total));
     };
@@ -288,58 +320,74 @@ pagibigValue = pagibigEe;
     philHealthCheckbox.addItemListener(e -> compute.run());
     pagibigCheckbox.addItemListener(e -> compute.run());
 
-    // Initial compute based on restored states
+    // Initial compute
     compute.run();
 
     // Layout panel
     JPanel panel = new JPanel();
-panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-panel.setPreferredSize(new Dimension(400, 250)); // reduce width
+    panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+    panel.setPreferredSize(new Dimension(500, 300));
 
-// Header
-JPanel headerRow = new JPanel(new GridLayout(1, 5, 5, 5));
-headerRow.add(new JLabel("Include"));
-headerRow.add(new JLabel("Benefit"));
-headerRow.add(new JLabel("Employer"));
-headerRow.add(new JLabel("Employee"));
-headerRow.add(new JLabel("Total"));
-panel.add(headerRow);
+    JPanel headerRow = new JPanel(new GridLayout(1, 5, 5, 5));
+    headerRow.add(new JLabel("Include"));
+    headerRow.add(new JLabel("Benefit"));
+    headerRow.add(new JLabel("Employer"));
+    headerRow.add(new JLabel("Employee"));
+    headerRow.add(new JLabel("Total"));
+    panel.add(headerRow);
 
-// SSS Row
-JPanel sssRow = new JPanel(new GridLayout(1, 5, 5, 5));
-sssRow.add(sssCheckbox);
-sssRow.add(new JLabel("SSS"));
-sssRow.add(sssEmpLabel);
-sssRow.add(sssEeLabel);
-sssRow.add(sssTotalLabel);
-panel.add(sssRow);
+    // SSS
+    JPanel sssRow = new JPanel(new GridLayout(1, 5, 5, 5));
+    sssRow.add(sssCheckbox);
+    sssRow.add(new JLabel("SSS"));
+    sssRow.add(sssEmpLabel);
+    sssRow.add(sssEeLabel);
+    sssRow.add(sssTotalLabel);
+    panel.add(sssRow);
 
-// PhilHealth Row
-JPanel philRow = new JPanel(new GridLayout(1, 5, 5, 5));
-philRow.add(philHealthCheckbox);
-philRow.add(new JLabel("PhilHealth"));
-philRow.add(philEmpLabel);
-philRow.add(philEeLabel);
-philRow.add(philTotalLabel);
-panel.add(philRow);
+    // PhilHealth
+    JPanel philRow = new JPanel(new GridLayout(1, 5, 5, 5));
+    philRow.add(philHealthCheckbox);
+    philRow.add(new JLabel("PhilHealth"));
+    philRow.add(philEmpLabel);
+    philRow.add(philEeLabel);
+    philRow.add(philTotalLabel);
+    panel.add(philRow);
 
-// Pag-IBIG Row
-JPanel pagibigRow = new JPanel(new GridLayout(1, 5, 5, 5));
-pagibigRow.add(pagibigCheckbox);
-pagibigRow.add(new JLabel("Pag-IBIG"));
-pagibigRow.add(pagibigEmpLabel);
-pagibigRow.add(pagibigEeLabel);
-pagibigRow.add(pagibigTotalLabel);
-panel.add(pagibigRow);
+    // Pag-IBIG
+    JPanel pagibigRow = new JPanel(new GridLayout(1, 5, 5, 5));
+    pagibigRow.add(pagibigCheckbox);
+    pagibigRow.add(new JLabel("Pag-IBIG"));
+    pagibigRow.add(pagibigEmpLabel);
+    pagibigRow.add(pagibigEeLabel);
+    pagibigRow.add(pagibigTotalLabel);
+    panel.add(pagibigRow);
+    
+     // Total Contribution
+    panel.add(Box.createRigidArea(new Dimension(0, 20)));
+    // Total Employee Contribution
+    JPanel employeeTotalRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    employeeTotalRow.add(new JLabel("Total Employee Contribution: "));
+    employeeTotalRow.add(totalEmployeeContributionLabel);
+    panel.add(employeeTotalRow);
 
-// Total Contribution Row
-panel.add(Box.createRigidArea(new Dimension(0, 50)));
 
-JPanel totalRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
-totalRow.add(new JLabel("Total Monthly Contribution: "));
-totalRow.add(totalContributionLabel);
-panel.add(totalRow);
+    // Total Contribution
+    JPanel totalRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    totalRow.add(new JLabel("Total Monthly Contribution: "));
+    totalRow.add(totalContributionLabel);
+    panel.add(totalRow);
 
+    // BIR and Net Pay
+    JPanel birRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    birRow.add(new JLabel("BIR Tax: "));
+    birRow.add(birTaxLabel);
+    panel.add(birRow);
+
+    JPanel netPayRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    netPayRow.add(new JLabel("Net Pay: "));
+    netPayRow.add(netPayLabel);
+    panel.add(netPayRow);
 
     JOptionPane.showMessageDialog(null, panel, "Benefit Calculation", JOptionPane.PLAIN_MESSAGE);
 }
