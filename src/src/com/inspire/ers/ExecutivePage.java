@@ -114,7 +114,7 @@ public class ExecutivePage extends JFrame {
 
         JButton openAllowancePageBtn = new JButton("Open Allowance Page");
         topPanel.add(openAllowancePageBtn);
-        JButton openPayrollBtn = new JButton("Executive Payroll");
+        JButton openPayrollBtn = new JButton("Exe Payroll");
         topPanel.add(openPayrollBtn);
 
         // Add Listeners

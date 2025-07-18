@@ -193,16 +193,17 @@ public class ExecutivePayrollPage extends JFrame {
             double pagibigEmp;
             double pagibigEr;
 
-            if (basicPay <= 1500) {
-                pagibigEmp = roundTwoDecimals(basicPay * 0.01);
-                pagibigEr = roundTwoDecimals(basicPay * 0.02);
-            } else if (basicPay >= 10000) {
-                pagibigEmp = roundTwoDecimals(basicPay * 0.02);
-                pagibigEr = roundTwoDecimals(basicPay * 0.02);
-            } else {
-                pagibigEmp = roundTwoDecimals(basicPay * 0.01);
-                pagibigEr = roundTwoDecimals(basicPay * 0.02);
-            }
+            // === Pag-IBIG Calculation (Hybrid: 1% below 10k, 2% capped at 10k) ===
+double pagibigBase = Math.min(basicPay, 10000);
+
+if (basicPay <= 10000) {
+    pagibigEmp = roundTwoDecimals(pagibigBase * 0.01); // Employee 1%
+    pagibigEr  = roundTwoDecimals(pagibigBase * 0.02); // Employer 2%
+} else {
+    pagibigEmp = roundTwoDecimals(pagibigBase * 0.02); // Employee 2% capped
+    pagibigEr  = roundTwoDecimals(pagibigBase * 0.02); // Employer 2% capped
+}
+
             
             double totalcontribution = sssEmp + philhealthEmp + pagibigEmp;
             

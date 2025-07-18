@@ -52,7 +52,7 @@ public class HomePage extends JFrame {
         JButton executiveBtn = createStyledButton("EXECUTIVE");
         JButton addEmployeeBtn = createStyledButton("ADD EMPLOYEE");
         JButton finalPayrollBtn = createStyledButton("PAYROLL");
-        JButton timeKeepingBtn = new JButton("TIME KEEPING");
+        JButton timeKeepingBtn = createStyledButton("TIME KEEPING");
 
         employeeCountLabel = new JLabel("#Employee: 0");
         employeeCountLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
