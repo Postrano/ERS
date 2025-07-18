@@ -183,7 +183,7 @@ class ButtonEditor extends DefaultCellEditor {
         button.addActionListener(e -> showBenefitsDialog());
     }
     
-    private boolean sssSelected = false;
+private boolean sssSelected = false;
 private boolean philHealthSelected = false;
 private boolean pagibigSelected = false;
 
@@ -313,6 +313,11 @@ if (taxableIncome <= 20833) {
 
         double total = sssTotal + philTotal + pagibigTotal;
         totalContributionLabel.setText(String.format("%.2f", total));
+        
+        sssValue = sssEe;
+        philhealthValue = philEe;
+        pagibigValue = pagibigEe;
+        birTaxValue = birTax;
     };
 
     // Add listeners
@@ -424,9 +429,10 @@ if (taxableIncome <= 20833) {
     }
 }
  
- private double sssValue = 0.0;
+private double sssValue = 0.0;
 private double pagibigValue = 0.0;
 private double philhealthValue = 0.0;
+private double birTaxValue = 0.0;
 
 
 private void handleDownloadPayslip() {
@@ -459,13 +465,14 @@ private void handleDownloadPayslip() {
     double sss = sssValue;
     double pagibig = pagibigValue;
     double philhealth = philhealthValue;
+    double bir = birTaxValue;
 
     // ✅ Get Total Absent Deduction from column 13
     double absentDeduction = Double.parseDouble(model.getValueAt(selectedRow, 13).toString());
 
     // ✅ Recalculate totals
     double totalEarnings = basicPay + allowance + execAllow + otPay;
-    double totalDeductions = sss + pagibig + philhealth + absentDeduction;
+    double totalDeductions = sss + pagibig + philhealth + absentDeduction + bir;
     double netPay = totalEarnings - totalDeductions;
 
     // ✅ Update the Net Pay cell in the table (optional)
@@ -545,7 +552,7 @@ String singlePayslip = String.format("""
   <tr>
     <td>Absent Day%s</td><td>%d</td>
     <td>Absent Deduction</td><td>Php %.2f</td>
-    <td></td><td>0</td>
+    <td>BIR Tax</td><td>Php %.2f</td>
     <td></td>
   </tr>
   <tr><td></td><td>0</td><td></td><td>0</td><td></td><td>0</td><td></td></tr>
@@ -578,6 +585,7 @@ String singlePayslip = String.format("""
     absentDays == 1 ? "" : "s",
     absentDays,
     absentDeduction,
+    bir,
     totalDeductions,
     netPay
 );
