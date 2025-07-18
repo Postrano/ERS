@@ -16,65 +16,48 @@ public class HomePage extends JFrame {
 
     public HomePage(String company, String role) {
         this.selectedCompany = company;
+
         setTitle("INSPIRE EMPLOYEE RECORDS SYSTEM - " + company);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setExtendedState(JFrame.MAXIMIZED_BOTH); // full screen
         setLocationRelativeTo(null);
 
-        // Set icon
-        ImageIcon icon = new ImageIcon(getClass().getResource("/images/inspirelogo2.jpg"));
-        setIconImage(icon.getImage());
+        setIconImage(new ImageIcon(getClass().getResource("/images/inspirelogo2.jpg")).getImage());
 
         // === Main Panel ===
         mainPanel = new JPanel(new BorderLayout(20, 20));
+        mainPanel.setBackground(new Color(13, 27, 42));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
-        mainPanel.setBackground(new Color(245, 245, 250)); // light gray background
+        setContentPane(mainPanel);
 
-        // === Top Bar ===
-        JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBackground(new Color(255, 255, 255));
+        // === Top Panel ===
+        JPanel topPanel = new JPanel(new BorderLayout(10, 10));
+        topPanel.setBackground(new Color(27, 38, 59));
         topPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
 
-       
-        // Welcome Message Panel (Centered at Top)
-        JLabel welcomeLabel = new JLabel("Welcome to " + company.toUpperCase() + " Employees");
-        welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
-        welcomeLabel.setForeground(new Color(33, 37, 41));
+        JLabel welcomeLabel = new JLabel("Welcome to " + company + " Employees");
+        welcomeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 30));
+        welcomeLabel.setForeground(Color.WHITE);
 
         JPanel welcomePanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 10));
         welcomePanel.setBackground(topPanel.getBackground());
         welcomePanel.add(welcomeLabel);
-        
-        // Position Filter Dropdown
-        String[] positions = {"All Departments", "System Developer", "Marketing", "Sales Associate"};
-        JComboBox<String> positionFilter = new JComboBox<>(positions);
-        positionFilter.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        positionFilter.setPreferredSize(new Dimension(160, 30));
-        
-        String[] companyOptions = {"All Companies", "IHI", "INGI", "INSPIRE ALLIANCE"};
-        JComboBox<String> companyFilter = new JComboBox<>(companyOptions);
-        companyFilter.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        companyFilter.setPreferredSize(new Dimension(160, 30));
 
-        // Search Field
-        JTextField searchField = new JTextField(20);
-        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        searchField.setPreferredSize(new Dimension(200, 30));
+        // === Filters ===
+        JComboBox<String> positionFilter = createStyledComboBox(new String[]{"All Departments", "System Developer", "Marketing", "Sales Associate"});
+        JComboBox<String> companyFilter = createStyledComboBox(new String[]{"All Companies", "IHI", "INGI", "INSPIRE ALLIANCE"});
+        JTextField searchField = createStyledTextField(20);
 
-        // Buttons
-        JButton executiveBtn = new JButton("EXECUTIVE");
-        JButton addEmployeeBtn = new JButton("ADD EMPLOYEE");
-        JButton finalPayrollBtn = new JButton("PAYROLL");
-        executiveBtn.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        addEmployeeBtn.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        finalPayrollBtn.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        // === Buttons ===
+        JButton executiveBtn = createStyledButton("EXECUTIVE");
+        JButton addEmployeeBtn = createStyledButton("ADD EMPLOYEE");
+        JButton finalPayrollBtn = createStyledButton("PAYROLL");
+        JButton timeKeepingBtn = new JButton("TIME KEEPING");
 
-        // Employee Count
         employeeCountLabel = new JLabel("#Employee: 0");
         employeeCountLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        employeeCountLabel.setForeground(new Color(80, 80, 80));
+        employeeCountLabel.setForeground(Color.WHITE);
 
-        // Button Container
         JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         leftPanel.setBackground(topPanel.getBackground());
         leftPanel.add(executiveBtn);
@@ -85,9 +68,9 @@ public class HomePage extends JFrame {
         rightPanel.setBackground(topPanel.getBackground());
         rightPanel.add(employeeCountLabel);
         if ("ALL".equalsIgnoreCase(selectedCompany)) {
-    rightPanel.add(companyFilter); // Only show if super admin
-}
-        rightPanel.add(positionFilter);  // Add before or after searchField
+            rightPanel.add(companyFilter);
+        }
+        rightPanel.add(positionFilter);
         rightPanel.add(searchField);
 
         topPanel.add(welcomePanel, BorderLayout.NORTH);
@@ -102,76 +85,43 @@ public class HomePage extends JFrame {
         employeeListPanel.setBackground(mainPanel.getBackground());
 
         scrollPane = new JScrollPane(employeeListPanel);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setBorder(null);
         scrollPane.getViewport().setBackground(mainPanel.getBackground());
-
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
-        add(mainPanel);
 
-        // === Button Actions ===
-        executiveBtn.addActionListener(e -> {
-            ExecutivePage executivePage = new ExecutivePage(selectedCompany);
-            executivePage.setVisible(true);
-        });
-
-
-        addEmployeeBtn.addActionListener(e -> {
-            EmployeeForm employeeForm = EmployeeForm.createForNewEmployee(this, selectedCompany);
-            employeeForm.setVisible(true);
+        // === Actions ===
+        executiveBtn.addActionListener(e -> new ExecutivePage(selectedCompany).setVisible(true));
+        addEmployeeBtn.addActionListener(e -> EmployeeForm.createForNewEmployee(this, selectedCompany).setVisible(true));
+        finalPayrollBtn.addActionListener(e -> new FinalPayrollPage("ALL".equalsIgnoreCase(selectedCompany) ? "ALL" : selectedCompany).setVisible(true));
+                timeKeepingBtn.addActionListener(e -> {
+            TimeKeepingPage tkPage = new TimeKeepingPage(selectedCompany);
+            tkPage.setVisible(true);
         });
         
-        finalPayrollBtn.addActionListener(e -> {
-    if ("ALL".equalsIgnoreCase(selectedCompany)) {
-        // Super Admin can view all payroll
-        FinalPayrollPage finalPayrollPage = new FinalPayrollPage("ALL"); 
-        finalPayrollPage.setVisible(true);
-    } else {
-        // Regular admin can view only their company payroll
-        FinalPayrollPage finalPayrollPage = new FinalPayrollPage(selectedCompany);
-        finalPayrollPage.setVisible(true);
-    }
-});
+        KeyAdapter keyListener = new KeyAdapter() {
+            public void keyReleased(KeyEvent e) {
+                updateFilter(searchField.getText(), positionFilter.getSelectedItem().toString(),
+                        "ALL".equalsIgnoreCase(selectedCompany) ? companyFilter.getSelectedItem().toString() : selectedCompany);
+            }
+        };
 
-        // Unified filter logic for both position and search
-KeyAdapter keyListener = new KeyAdapter() {
-    @Override
-    public void keyReleased(KeyEvent e) {
-        updateFilter(
-    searchField.getText(),
-    positionFilter.getSelectedItem().toString(),
-    "ALL".equalsIgnoreCase(selectedCompany) ? companyFilter.getSelectedItem().toString() : selectedCompany
-);
+        searchField.addKeyListener(keyListener);
+        positionFilter.addActionListener(e -> updateFilter(searchField.getText(), positionFilter.getSelectedItem().toString(),
+                "ALL".equalsIgnoreCase(selectedCompany) ? companyFilter.getSelectedItem().toString() : selectedCompany));
+        if ("ALL".equalsIgnoreCase(selectedCompany)) {
+            companyFilter.addActionListener(e -> updateFilter(searchField.getText(), positionFilter.getSelectedItem().toString(), companyFilter.getSelectedItem().toString()));
+        }
 
-    }
-};
-
-searchField.addKeyListener(keyListener);
-positionFilter.addActionListener(e -> updateFilter(
-    searchField.getText(),
-    positionFilter.getSelectedItem().toString(),
-    "ALL".equalsIgnoreCase(selectedCompany) ? companyFilter.getSelectedItem().toString() : selectedCompany
-));
-if ("ALL".equalsIgnoreCase(selectedCompany)) {
-    companyFilter.addActionListener(e -> updateFilter(
-        searchField.getText(),
-        positionFilter.getSelectedItem().toString(),
-        companyFilter.getSelectedItem().toString()
-    ));
-}
-
-        // Load from database
         loadEmployeesFromDB();
     }
 
     private void loadEmployeesFromDB() {
-        List<Employee> dbEmployees;
-if ("ALL".equalsIgnoreCase(selectedCompany)) {
-    dbEmployees = EmployeeDAO.fetchAllEmployees(); // Create this method
-} else {
-    dbEmployees = EmployeeDAO.fetchEmployeesByCompany(selectedCompany);
-}
+        List<Employee> dbEmployees = "ALL".equalsIgnoreCase(selectedCompany)
+                ? EmployeeDAO.fetchAllEmployees()
+                : EmployeeDAO.fetchEmployeesByCompany(selectedCompany);
 
+        employees.clear();
         employees.addAll(dbEmployees);
         updateEmployeeList();
         employeeCountLabel.setText("#Employee: " + employees.size());
@@ -189,23 +139,37 @@ if ("ALL".equalsIgnoreCase(selectedCompany)) {
 
     private JPanel createEmployeeCard(Employee employee) {
         JPanel card = new JPanel(new BorderLayout(15, 0));
-        card.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200), 1));
-        card.setBackground(Color.WHITE);
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
+        card.setBackground(new Color(33, 45, 65));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 70));
+        card.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
         JLabel nameLabel = new JLabel(employee.getFirstName() + " " + employee.getLastName());
         nameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-        nameLabel.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 10));
+        nameLabel.setForeground(Color.WHITE);
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttonPanel.setOpaque(false);
-        JButton editBtn = new JButton("Edit");
-        JButton timeBtn = new JButton("Time");
-        JButton removeBtn = new JButton("Remove");
 
-        editBtn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        timeBtn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        removeBtn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        JButton editBtn = createStyledMiniButton("Edit");
+        JButton timeBtn = createStyledMiniButton("Time");
+        JButton removeBtn = createStyledMiniButton("Remove");
+
+        editBtn.addActionListener(e -> new EmployeeForm(HomePage.this, employee, getSelectedCompany()).setVisible(true));
+        timeBtn.addActionListener(e -> {
+            String fullName = (employee.getFirstName() + " " +
+                    (employee.getMiddleName() == null ? "" : employee.getMiddleName() + " ") +
+                    employee.getLastName()).trim();
+            new PayrollPage(fullName, String.valueOf(employee.getId())).setVisible(true);
+        });
+        removeBtn.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(HomePage.this,
+                    "Are you sure you want to remove this employee?",
+                    "Confirm Remove", JOptionPane.YES_NO_OPTION);
+            if (confirm == JOptionPane.YES_OPTION) {
+                EmployeeDAO.softRemoveEmployee(employee.getId());
+                refreshEmployeeList();
+            }
+        });
 
         buttonPanel.add(timeBtn);
         buttonPanel.add(editBtn);
@@ -214,74 +178,81 @@ if ("ALL".equalsIgnoreCase(selectedCompany)) {
         card.add(nameLabel, BorderLayout.WEST);
         card.add(buttonPanel, BorderLayout.EAST);
 
-        // === Button Actions ===
-        editBtn.addActionListener(e -> {
-          EmployeeForm editForm = new EmployeeForm(HomePage.this, employee, getSelectedCompany());
+        // Hover effect
+        card.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) {
+                card.setBackground(new Color(40, 55, 80));
+                card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            }
 
-            editForm.setVisible(true);
-        });
-
-        timeBtn.addActionListener(e -> {
-            String middleName = employee.getMiddleName() != null ? employee.getMiddleName() : "";
-            String fullName = employee.getFirstName() + " " + middleName + " " + employee.getLastName();
-            String idNumber = String.valueOf(employee.getId());
-            PayrollPage payrollPage = new PayrollPage(fullName.trim(), idNumber);
-            payrollPage.setVisible(true);
-        });
-
-        removeBtn.addActionListener(e -> {
-            int confirm = JOptionPane.showConfirmDialog(HomePage.this,
-                    "Are you sure you want to remove this employee?",
-                    "Confirm Remove", JOptionPane.YES_NO_OPTION);
-
-            if (confirm == JOptionPane.YES_OPTION) {
-                EmployeeDAO.softRemoveEmployee(employee.getId());
-                refreshEmployeeList();
+            public void mouseExited(MouseEvent e) {
+                card.setBackground(new Color(33, 45, 65));
             }
         });
 
         return card;
     }
-    
-    private void updateFilter(String searchText, String position, String company) {
-    employeeListPanel.removeAll();
 
-    boolean isAllCompanies = "All Companies".equalsIgnoreCase(company);
-    boolean isAllDepartments = "All Departments".equalsIgnoreCase(position);
-
-    for (Employee employee : employees) {
-        String fullName = (employee.getFirstName() + " " + employee.getLastName()).toLowerCase();
-        String empCompany = employee.getCompany();
-        String empPosition = employee.getPosition();
-
-        boolean matchesSearch = fullName.contains(searchText.toLowerCase());
-
-        // Company filtering
-        boolean matchesCompany = isAllCompanies || (empCompany != null && empCompany.equalsIgnoreCase(company));
-
-        // Position filtering
-        boolean matchesPosition = isAllDepartments || (empPosition != null && empPosition.equalsIgnoreCase(position));
-
-        if (matchesSearch && matchesCompany && matchesPosition) {
-            employeeListPanel.add(createEmployeeCard(employee));
-            employeeListPanel.add(Box.createVerticalStrut(10));
-        }
+    private JButton createStyledButton(String text) {
+        JButton btn = new JButton(text);
+        btn.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        btn.setBackground(new Color(55, 71, 100));
+        btn.setForeground(Color.WHITE);
+        btn.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return btn;
     }
 
-    employeeListPanel.revalidate();
-    employeeListPanel.repaint();
-}
+    private JButton createStyledMiniButton(String text) {
+        JButton btn = new JButton(text);
+        btn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        btn.setBackground(new Color(55, 71, 100));
+        btn.setForeground(Color.WHITE);
+        btn.setBorder(BorderFactory.createEmptyBorder(6, 14, 6, 14));
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return btn;
+    }
 
+    private JComboBox<String> createStyledComboBox(String[] items) {
+        JComboBox<String> comboBox = new JComboBox<>(items);
+        comboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        comboBox.setPreferredSize(new Dimension(160, 30));
+        comboBox.setBackground(new Color(224, 224, 224));
+        comboBox.setForeground(Color.BLACK);
+        return comboBox;
+    }
 
-    private void filterEmployeeList(String searchText) {
+    private JTextField createStyledTextField(int columns) {
+        JTextField textField = new JTextField(columns);
+        textField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        textField.setBackground(Color.WHITE);
+        textField.setForeground(Color.BLACK);
+        textField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(200, 200, 200)),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+        return textField;
+    }
+
+    private void updateFilter(String searchText, String position, String company) {
         employeeListPanel.removeAll();
-        for (Employee employee : employees) {
-            String fullName = (employee.getFirstName() + " " + employee.getLastName()).toLowerCase();
-            if (fullName.contains(searchText)) {
-                employeeListPanel.add(createEmployeeCard(employee));
+
+        boolean isAllCompanies = "All Companies".equalsIgnoreCase(company);
+        boolean isAllDepartments = "All Departments".equalsIgnoreCase(position);
+
+        for (Employee emp : employees) {
+            boolean matchesSearch = (emp.getFirstName() + " " + emp.getLastName()).toLowerCase().contains(searchText.toLowerCase());
+            boolean matchesCompany = isAllCompanies || (emp.getCompany() != null && emp.getCompany().equalsIgnoreCase(company));
+            boolean matchesPosition = isAllDepartments || (emp.getPosition() != null && emp.getPosition().equalsIgnoreCase(position));
+
+            if (matchesSearch && matchesCompany && matchesPosition) {
+                employeeListPanel.add(createEmployeeCard(emp));
                 employeeListPanel.add(Box.createVerticalStrut(10));
             }
         }
+
         employeeListPanel.revalidate();
         employeeListPanel.repaint();
     }
@@ -312,8 +283,6 @@ if ("ALL".equalsIgnoreCase(selectedCompany)) {
             e.printStackTrace();
         }
 
-        SwingUtilities.invokeLater(() -> {
-            new HomePage("IHI", "Super Admin").setVisible(true);
-        });
+        SwingUtilities.invokeLater(() -> new HomePage("IHI", "Super Admin").setVisible(true));
     }
 }
