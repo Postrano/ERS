@@ -51,9 +51,11 @@ public class Login extends JFrame {
 
         // Fields
         JLabel usernameLabel = createLabel("Username");
+        usernameLabel.setAlignmentX(Component.CENTER_ALIGNMENT); // center alignment
         usernameField = createTextField();
 
         JLabel passwordLabel = createLabel("Password");
+        passwordLabel.setAlignmentX(Component.CENTER_ALIGNMENT); // center alignment
         passwordField = new JPasswordField(15);
         styleTextField(passwordField);
 
