@@ -1,0 +1,2 @@
+Main-Class: com.inspire.ers.Login
+Class-Path: lib/mysql-connector-j-9.2.0.jar

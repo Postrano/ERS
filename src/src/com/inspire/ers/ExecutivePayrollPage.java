@@ -13,14 +13,42 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 import javax.swing.event.TableModelEvent;
+import java.util.List;
+
+
+
 
 public class ExecutivePayrollPage extends JFrame {
     private JTable payrollTable;
     private DefaultTableModel tableModel;
     private JSpinner payDateSpinner, startDateSpinner, endDateSpinner;
     private final String selectedCompany;
+    
+    @SuppressWarnings("rawtypes")
+    private final Map<String, List<OtherField>> otherFieldsMap = new HashMap<>();
+    
+   public class OtherField {
+    private final String name;
+    private final double value;
+    private final boolean isDeduction;
+
+    public OtherField(String name, double value, boolean isDeduction) {
+        this.name = name;
+        this.value = value;
+        this.isDeduction = isDeduction;
+    }
+
+    // Getters if needed
+    public String getName() { return name; }
+    public double getValue() { return value; }
+    public boolean isDeduction() { return isDeduction; }
+}
+
 
     public ExecutivePayrollPage(String selectedCompany) {
         this.selectedCompany = selectedCompany;
@@ -68,7 +96,10 @@ public class ExecutivePayrollPage extends JFrame {
         
        
         };
+        
         add(new JScrollPane(payrollTable), BorderLayout.CENTER);
+        
+        
         
         tableModel.addTableModelListener(e -> {
     if (e.getType() == TableModelEvent.UPDATE) {
@@ -92,7 +123,142 @@ public class ExecutivePayrollPage extends JFrame {
         }
     }
 });
+      
 
+        
+         JButton othersBtn = new JButton("Add Others");
+       
+         
+         othersBtn.addActionListener(e -> {
+    int selectedRow = payrollTable.getSelectedRow();
+    if (selectedRow == -1) {
+        JOptionPane.showMessageDialog(this, "Please select an executive row first.");
+        return;
+    }
+
+    JDialog dialog = new JDialog(this, "Add Other Fields", true);
+    dialog.setSize(550, 300);
+    dialog.setLocationRelativeTo(this);
+    dialog.setLayout(new BorderLayout(10, 10));
+
+    JPanel formPanel = new JPanel(new GridBagLayout());
+    formPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 10, 20));
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(10, 10, 5, 10);
+    gbc.anchor = GridBagConstraints.WEST;
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    gbc.weightx = 1;
+
+    // Cash Advance Field
+    gbc.gridx = 0; gbc.gridy = 0;
+    formPanel.add(new JLabel("Cash Advance:"), gbc);
+    JTextField cashAdvanceField = new JTextField(15);
+    gbc.gridx = 1;
+    formPanel.add(cashAdvanceField, gbc);
+    JCheckBox cashDeductionBox = new JCheckBox("Deduction");
+    gbc.gridx = 2;
+    formPanel.add(cashDeductionBox, gbc);
+
+    // Bonus Field
+    gbc.gridx = 0; gbc.gridy++;
+    formPanel.add(new JLabel("Bonus:"), gbc);
+    JTextField bonusField = new JTextField(15);
+    gbc.gridx = 1;
+    formPanel.add(bonusField, gbc);
+    JCheckBox bonusDeductionBox = new JCheckBox("Deduction");
+    gbc.gridx = 2;
+    formPanel.add(bonusDeductionBox, gbc);
+
+    // Custom Fields Section
+    gbc.gridx = 0; gbc.gridy++;
+    gbc.gridwidth = 3;
+    formPanel.add(new JLabel("Other Fields:"), gbc);
+
+    JPanel dynamicFieldsPanel = new JPanel();
+    dynamicFieldsPanel.setLayout(new BoxLayout(dynamicFieldsPanel, BoxLayout.Y_AXIS));
+    JScrollPane dynamicFieldsScroll = new JScrollPane(dynamicFieldsPanel);
+    dynamicFieldsScroll.setPreferredSize(new Dimension(500, 200));
+
+    gbc.gridy++;
+    formPanel.add(dynamicFieldsScroll, gbc);
+
+    // Add Custom Field Button
+    JButton addFieldBtn = new JButton("+ Add Custom Field");
+    addFieldBtn.setAlignmentX(Component.RIGHT_ALIGNMENT);
+    addFieldBtn.addActionListener(ev -> {
+        JPanel rowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        JTextField nameField = new JTextField(10);
+        JTextField valueField = new JTextField(10);
+        JCheckBox deductionBox = new JCheckBox("Deduction");
+        rowPanel.add(new JLabel("Name:"));
+        rowPanel.add(nameField);
+        rowPanel.add(new JLabel("Value:"));
+        rowPanel.add(valueField);
+        rowPanel.add(deductionBox);
+        dynamicFieldsPanel.add(rowPanel);
+        dynamicFieldsPanel.revalidate();
+    });
+
+    // Buttons at bottom
+    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+    JButton saveOthersBtn = new JButton("Save");
+   
+  saveOthersBtn.addActionListener(ev -> {
+    int selectedRowIndex = payrollTable.getSelectedRow();
+    if (selectedRow == -1) {
+        JOptionPane.showMessageDialog(null, "Please select a row.");
+        return;
+    }
+
+    String execId = tableModel.getValueAt(selectedRow, 0).toString();
+    List<OtherField> fields = new ArrayList<>();
+
+    String cashAdvance = cashAdvanceField.getText().trim();
+    boolean isCashDeduction = cashDeductionBox.isSelected();
+    if (!cashAdvance.isEmpty()) {
+        double value = Double.parseDouble(cashAdvance);
+        fields.add(new OtherField("Cash Advance", value, isCashDeduction));
+    }
+
+    String bonus = bonusField.getText().trim();
+    boolean isBonusDeduction = bonusDeductionBox.isSelected();
+    if (!bonus.isEmpty()) {
+        double value = Double.parseDouble(bonus);
+        fields.add(new OtherField("Bonus", value, isBonusDeduction));
+    }
+
+    for (Component comp : dynamicFieldsPanel.getComponents()) {
+        if (comp instanceof JPanel panel) {
+            JTextField nameField = (JTextField) panel.getComponent(1);
+            JTextField valueField = (JTextField) panel.getComponent(3);
+            JCheckBox dedBox = (JCheckBox) panel.getComponent(4);
+
+            String fname = nameField.getText().trim();
+            String fval = valueField.getText().trim();
+            boolean isDeduction = dedBox.isSelected();
+
+            if (!fname.isEmpty() && !fval.isEmpty()) {
+                double value = Double.parseDouble(fval);
+                fields.add(new OtherField(fname, value, isDeduction));
+            }
+        }
+    }
+
+    // 🔥 Save the fields for this employee
+    otherFieldsMap.put(execId, fields);
+
+    JOptionPane.showMessageDialog(null, "Other earnings/deductions saved.");
+    dialog.dispose();
+});
+
+
+    buttonPanel.add(addFieldBtn);
+    buttonPanel.add(saveOthersBtn);
+
+    dialog.add(formPanel, BorderLayout.CENTER);
+    dialog.add(buttonPanel, BorderLayout.SOUTH);
+    dialog.setVisible(true);
+});
 
         generateBtn.addActionListener(e -> {
             Date payDate = (Date) payDateSpinner.getValue();
@@ -113,9 +279,15 @@ public class ExecutivePayrollPage extends JFrame {
         JButton htmlBtn = new JButton("Download Payslip (HTML)");
         htmlBtn.addActionListener(e -> downloadPayslip(selectedCompany));
         bottomPanel.add(htmlBtn);
+        
+       
+        bottomPanel.add(othersBtn);
+
 
         add(bottomPanel, BorderLayout.SOUTH);
+        
     }
+     
 
     private JSpinner createDateSpinner() {
         SpinnerDateModel dateModel = new SpinnerDateModel(new Date(), null, null, java.util.Calendar.DAY_OF_MONTH);
@@ -139,7 +311,7 @@ public class ExecutivePayrollPage extends JFrame {
         return count;
     }
 
- private void loadPayrollData(java.sql.Date startDate, java.sql.Date endDate) {
+    private void loadPayrollData(java.sql.Date startDate, java.sql.Date endDate) {
     tableModel.setRowCount(0); // Clear previous data
     int totalWorkingDays = countWeekdaysBetween(startDate, endDate);
 
@@ -318,9 +490,14 @@ if (basicPay <= 10000) {
         return "";
     }
 }
+    
+   
+
+   
+
 
   
- private void downloadPayslip(String selectedCompany) {
+private void downloadPayslip(String selectedCompany) {
     int selectedRow = payrollTable.getSelectedRow();
     if (selectedRow == -1) {
         JOptionPane.showMessageDialog(this, "Please select a row from the table.");
@@ -329,6 +506,7 @@ if (basicPay <= 10000) {
 
     String name = tableModel.getValueAt(selectedRow, 1).toString();
     String execId = tableModel.getValueAt(selectedRow, 0).toString();
+    List<OtherField> otherFields = otherFieldsMap.getOrDefault(execId, new ArrayList<>());
     int totalPresent = Integer.parseInt(tableModel.getValueAt(selectedRow, 2).toString());
     int totalAbsent = Integer.parseInt(tableModel.getValueAt(selectedRow, 3).toString());
 
@@ -336,8 +514,6 @@ if (basicPay <= 10000) {
     double allowance = Double.parseDouble(tableModel.getValueAt(selectedRow, 5).toString());
     double mktg = Double.parseDouble(tableModel.getValueAt(selectedRow, 6).toString());
     double execAllow = Double.parseDouble(tableModel.getValueAt(selectedRow, 7).toString());
-
-    double grossEarnings = basicPay + allowance + execAllow + mktg;
 
     double sssEmp = Double.parseDouble(tableModel.getValueAt(selectedRow, 9).toString());
     double pagibigEmp = Double.parseDouble(tableModel.getValueAt(selectedRow, 10).toString());
@@ -348,7 +524,40 @@ if (basicPay <= 10000) {
     double dailyRate = (totalDays > 0) ? basicPay / totalDays : 0;
     double absentDeduction = totalAbsent * dailyRate;
 
-    double totalDeduction = sssEmp + pagibigEmp + philhealthEmp + birEmp + absentDeduction;
+    // Prepare Other Earnings and Deductions
+    StringBuilder otherEarningsRows = new StringBuilder();
+    StringBuilder otherDeductionsRows = new StringBuilder();
+    double otherEarningsTotal = 0;
+    double otherDeductionsTotal = 0;
+
+   double bonus = 0.0;
+double cashAdvance = 0.0;
+
+for (OtherField field : otherFields) {
+    String label = field.getName();
+    double amount = field.getValue();
+
+    if ("Bonus".equalsIgnoreCase(label)) {
+        bonus += amount;
+    } else if ("Cash Advance".equalsIgnoreCase(label)) {
+        cashAdvance += amount;
+    } else if (field.isDeduction()) {
+        otherDeductionsRows.append(String.format(
+            "<tr><td>%s</td><td>Php %.2f</td><td></td><td></td><td></td><td></td><td></td></tr>",
+            label, amount));
+        otherDeductionsTotal += amount;
+    } else {
+        otherEarningsRows.append(String.format(
+            "<tr><td>%s</td><td>Php %.2f</td><td></td><td></td><td></td><td></td><td></td></tr>",
+            label, amount));
+        otherEarningsTotal += amount;
+    }
+}
+
+
+    double grossEarnings = basicPay + allowance + execAllow + mktg + bonus + cashAdvance + otherEarningsTotal;
+
+    double totalDeduction = sssEmp + pagibigEmp + philhealthEmp + birEmp + absentDeduction + otherDeductionsTotal;
     double netPay = grossEarnings - totalDeduction;
 
     String payDate = new SimpleDateFormat("MMMM dd, yyyy").format(payDateSpinner.getValue());
@@ -407,12 +616,11 @@ if (basicPay <= 10000) {
     </tr>
     <tr>
         <td>Overtime Pay</td><td>Php %.2f</td>
-        <td>Cash Advance</td><td>Php 0.00</td>
-        <td>Bonus</td><td>Php 0.00</td>
+        <td>Cash Advance</td><td>Php %.2f</td>
+        <td>Bonus</td><td>Php %.2f</td>
         <td></td>
     </tr>
-    <tr><td></td><td>0</td><td></td><td>0</td><td></td><td>0</td><td></td></tr>
-    <tr><td></td><td>0</td><td></td><td>0</td><td></td><td>0</td><td></td></tr>
+    %s
     <tr><td colspan="7" style="text-align: right; font-weight: bold;">Total: Php %.2f</td></tr>
 </table>
 <table>
@@ -428,8 +636,7 @@ if (basicPay <= 10000) {
         <td>BIR</td><td>Php %.2f</td>
         <td></td>
     </tr>
-    <tr><td></td><td>0</td><td></td><td>0</td><td></td><td>0</td><td></td></tr>
-    <tr><td></td><td>0</td><td></td><td>0</td><td></td><td>0</td><td></td></tr>
+    %s
     <tr><td colspan="7" style="text-align: right; font-weight: bold;">Total Deductions: Php %.2f</td></tr>
 </table>
 <div class="summary-and-signatures">
@@ -450,14 +657,16 @@ if (basicPay <= 10000) {
 """;
 
     String payslipFormatted = payslipContent.formatted(
-        logoUrl, selectedCompany, tin, location,
-        name, payDate, totalPresent,
-        execId, payPeriod,
-        basicPay, allowance, execAllow, mktg, grossEarnings,
-        sssEmp, pagibigEmp, philhealthEmp,
-        totalAbsent > 1 ? "s" : "", totalAbsent, absentDeduction, birEmp, totalDeduction,
-        netPay
-    );
+    logoUrl, selectedCompany, tin, location,
+    name, payDate, totalPresent,
+    execId, payPeriod,
+    basicPay, allowance, execAllow, mktg, cashAdvance, bonus,
+    otherEarningsRows.toString(), grossEarnings,
+    sssEmp, pagibigEmp, philhealthEmp,
+    totalAbsent > 1 ? "s" : "", totalAbsent, absentDeduction, birEmp,
+    otherDeductionsRows.toString(), totalDeduction,
+    netPay
+);
 
     String html = """
 <!DOCTYPE html>
@@ -495,7 +704,7 @@ if (basicPay <= 10000) {
     <div class="payslip">
         %s
     </div>
-  <hr style="margin: 30px 0; border: dashed 1px #ccc;">
+    <hr style="margin: 30px 0; border: dashed 1px #ccc;">
     <div class="payslip">
         %s
     </div>
@@ -506,6 +715,55 @@ if (basicPay <= 10000) {
     String apiKey = "sk_dc48b1f99bb971396765c80111f7d78e9e5fa723";
     PdfShiftConverter converter = new PdfShiftConverter(apiKey);
     converter.convertToPdfWithChooser(html);
+    
+    try {
+    Connection cn = DBUtil.getConnection(); // Use your existing DBUtil
+    String sql = """
+        INSERT INTO payslip_history (
+            employee_id, employee_name, company_name, pay_date, pay_period,
+            basic_pay, allowance, marketing, executive_allowance,
+            bonus, cash_advance, other_earnings,
+            sss, pagibig, philhealth, bir, absent_days, absent_deduction, other_deductions,
+            gross_pay, total_deductions, net_pay
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """;
+
+    try (PreparedStatement pst = cn.prepareStatement(sql)) {
+        pst.setString(1, execId);
+        pst.setString(2, name);
+        pst.setString(3, selectedCompany);
+        pst.setDate(4, new java.sql.Date(((java.util.Date)payDateSpinner.getValue()).getTime()));
+        pst.setString(5, payPeriod);
+
+        pst.setDouble(6, basicPay);
+        pst.setDouble(7, allowance);
+        pst.setDouble(8, mktg);
+        pst.setDouble(9, execAllow);
+
+        pst.setDouble(10, bonus);
+        pst.setDouble(11, cashAdvance);
+        pst.setString(12, otherEarningsRows.toString());
+
+        pst.setDouble(13, sssEmp);
+        pst.setDouble(14, pagibigEmp);
+        pst.setDouble(15, philhealthEmp);
+        pst.setDouble(16, birEmp);
+        pst.setInt(17, totalAbsent);
+        pst.setDouble(18, absentDeduction);
+        pst.setString(19, otherDeductionsRows.toString());
+
+        pst.setDouble(20, grossEarnings);
+        pst.setDouble(21, totalDeduction);
+        pst.setDouble(22, netPay);
+
+        pst.executeUpdate();
+        System.out.println("Payslip saved to database.");
+    }
+} catch (SQLException ex) {
+    ex.printStackTrace();
+    JOptionPane.showMessageDialog(null, "Failed to save payslip record: " + ex.getMessage());
+}
+
 }
 
 

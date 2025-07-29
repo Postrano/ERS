@@ -17,13 +17,42 @@ import java.nio.file.Paths;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
+import src.com.inspire.ers.DBUtil;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Date;
+
 
 public class FinalPayrollPage extends JFrame {
 
     private JTable table;
     private DefaultTableModel model;
     private final String selectedCompany;
+    private Map<String, List<OtherField>> otherFieldsMap = new HashMap<>();
+    
+    
+     public class OtherField {
+    private final String name;
+    private final double value;
+    private final boolean isDeduction;
+
+    public OtherField(String name, double value, boolean isDeduction) {
+        this.name = name;
+        this.value = value;
+        this.isDeduction = isDeduction;
+    }
+
+    // Getters if needed
+    public String getName() { return name; }
+    public double getValue() { return value; }
+    public boolean isDeduction() { return isDeduction; }
+}
+
 
     public FinalPayrollPage(String selectedCompany) {
         this.selectedCompany = selectedCompany;
@@ -116,6 +145,139 @@ table.getColumn("BENEFITS").setCellEditor(new ButtonEditor(new JCheckBox()));
         }
     }
 });
+    
+        JButton othersBtn = new JButton("Add Others");
+        
+           othersBtn.addActionListener(e -> {
+    int selectedRow = table.getSelectedRow();
+    if (selectedRow == -1) {
+        JOptionPane.showMessageDialog(this, "Please select an executive row first.");
+        return;
+    }
+
+    JDialog dialog = new JDialog(this, "Add Other Fields", true);
+    dialog.setSize(550, 300);
+    dialog.setLocationRelativeTo(this);
+    dialog.setLayout(new BorderLayout(10, 10));
+
+    JPanel formPanel = new JPanel(new GridBagLayout());
+    formPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 10, 20));
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(10, 10, 5, 10);
+    gbc.anchor = GridBagConstraints.WEST;
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    gbc.weightx = 1;
+
+    // Cash Advance Field
+    gbc.gridx = 0; gbc.gridy = 0;
+    formPanel.add(new JLabel("Cash Advance:"), gbc);
+    JTextField cashAdvanceField = new JTextField(15);
+    gbc.gridx = 1;
+    formPanel.add(cashAdvanceField, gbc);
+    JCheckBox cashDeductionBox = new JCheckBox("Deduction");
+    gbc.gridx = 2;
+    formPanel.add(cashDeductionBox, gbc);
+
+    // Bonus Field
+    gbc.gridx = 0; gbc.gridy++;
+    formPanel.add(new JLabel("Bonus:"), gbc);
+    JTextField bonusField = new JTextField(15);
+    gbc.gridx = 1;
+    formPanel.add(bonusField, gbc);
+    JCheckBox bonusDeductionBox = new JCheckBox("Deduction");
+    gbc.gridx = 2;
+    formPanel.add(bonusDeductionBox, gbc);
+
+    // Custom Fields Section
+    gbc.gridx = 0; gbc.gridy++;
+    gbc.gridwidth = 3;
+    formPanel.add(new JLabel("Other Fields:"), gbc);
+
+    JPanel dynamicFieldsPanel = new JPanel();
+    dynamicFieldsPanel.setLayout(new BoxLayout(dynamicFieldsPanel, BoxLayout.Y_AXIS));
+    JScrollPane dynamicFieldsScroll = new JScrollPane(dynamicFieldsPanel);
+    dynamicFieldsScroll.setPreferredSize(new Dimension(500, 200));
+
+    gbc.gridy++;
+    formPanel.add(dynamicFieldsScroll, gbc);
+
+    // Add Custom Field Button
+    JButton addFieldBtn = new JButton("+ Add Custom Field");
+    addFieldBtn.setAlignmentX(Component.RIGHT_ALIGNMENT);
+    addFieldBtn.addActionListener(ev -> {
+        JPanel rowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        JTextField nameField = new JTextField(10);
+        JTextField valueField = new JTextField(10);
+        JCheckBox deductionBox = new JCheckBox("Deduction");
+        rowPanel.add(new JLabel("Name:"));
+        rowPanel.add(nameField);
+        rowPanel.add(new JLabel("Value:"));
+        rowPanel.add(valueField);
+        rowPanel.add(deductionBox);
+        dynamicFieldsPanel.add(rowPanel);
+        dynamicFieldsPanel.revalidate();
+    });
+
+    // Buttons at bottom
+    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+    JButton saveOthersBtn = new JButton("Save");
+   
+  saveOthersBtn.addActionListener(ev -> {
+    int selectedRowIndex = table.getSelectedRow();
+    if (selectedRow == -1) {
+        JOptionPane.showMessageDialog(null, "Please select a row.");
+        return;
+    }
+
+    String execId = model.getValueAt(selectedRow, 0).toString();
+    List<FinalPayrollPage.OtherField> fields = new ArrayList<>();
+
+    String cashAdvance = cashAdvanceField.getText().trim();
+    boolean isCashDeduction = cashDeductionBox.isSelected();
+    if (!cashAdvance.isEmpty()) {
+        double value = Double.parseDouble(cashAdvance);
+        fields.add(new FinalPayrollPage.OtherField("Cash Advance", value, isCashDeduction));
+    }
+
+    String bonus = bonusField.getText().trim();
+    boolean isBonusDeduction = bonusDeductionBox.isSelected();
+    if (!bonus.isEmpty()) {
+        double value = Double.parseDouble(bonus);
+        fields.add(new FinalPayrollPage.OtherField("Bonus", value, isBonusDeduction));
+    }
+
+    for (Component comp : dynamicFieldsPanel.getComponents()) {
+        if (comp instanceof JPanel panel) {
+            JTextField nameField = (JTextField) panel.getComponent(1);
+            JTextField valueField = (JTextField) panel.getComponent(3);
+            JCheckBox dedBox = (JCheckBox) panel.getComponent(4);
+
+            String fname = nameField.getText().trim();
+            String fval = valueField.getText().trim();
+            boolean isDeduction = dedBox.isSelected();
+
+            if (!fname.isEmpty() && !fval.isEmpty()) {
+                double value = Double.parseDouble(fval);
+                fields.add(new FinalPayrollPage.OtherField(fname, value, isDeduction));
+            }
+        }
+    }
+
+    // 🔥 Save the fields for this employee
+    otherFieldsMap.put(execId, fields);
+
+    JOptionPane.showMessageDialog(null, "Other earnings/deductions saved.");
+    dialog.dispose();
+});
+
+
+    buttonPanel.add(addFieldBtn);
+    buttonPanel.add(saveOthersBtn);
+
+    dialog.add(formPanel, BorderLayout.CENTER);
+    dialog.add(buttonPanel, BorderLayout.SOUTH);
+    dialog.setVisible(true);
+});
 
         JScrollPane scrollPane = new JScrollPane(table,
             JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
@@ -157,6 +319,8 @@ table.getColumn("BENEFITS").setCellEditor(new ButtonEditor(new JCheckBox()));
         bottomPanel.add(downloadPayslipButton);
         
         add(bottomPanel, BorderLayout.SOUTH);
+        
+           bottomPanel.add(othersBtn);
     }
 
     class ButtonRenderer extends JButton implements javax.swing.table.TableCellRenderer {
@@ -446,6 +610,7 @@ private void handleDownloadPayslip() {
     // === Get data from table ===
     String execId = model.getValueAt(selectedRow, 0).toString(); // ID NUMBER
     String name = model.getValueAt(selectedRow, 1).toString();   // EMPLOYEE NAME
+    List<OtherField> otherFields = otherFieldsMap.getOrDefault(execId, new ArrayList<>());
     double basicPay = Double.parseDouble(model.getValueAt(selectedRow, 4).toString());
     double allowance = Double.parseDouble(model.getValueAt(selectedRow, 5).toString());
     double execAllow = Double.parseDouble(model.getValueAt(selectedRow, 6).toString());
@@ -470,176 +635,206 @@ private void handleDownloadPayslip() {
     // ✅ Get Total Absent Deduction from column 13
     double absentDeduction = Double.parseDouble(model.getValueAt(selectedRow, 13).toString());
 
+   StringBuilder otherEarningsRows = new StringBuilder();
+StringBuilder otherDeductionsRows = new StringBuilder();
+double otherEarningsTotal = 0;
+double otherDeductionsTotal = 0;
+
+double bonus = 0.0;
+double cashAdvance = 0.0;
+
+for (OtherField field : otherFields) {
+    String label = field.getName();
+    double amount = field.getValue();
+
+    if ("Bonus".equalsIgnoreCase(label)) {
+    bonus += amount;
+} else if ("Cash Advance".equalsIgnoreCase(label)) {
+    cashAdvance += amount;
+
+    // Add Cash Advance as a deduction row
+    otherDeductionsRows.append(String.format(
+        "<tr><td>%s</td><td>Php %.2f</td><td></td><td></td><td></td><td></td><td></td></tr>",
+        label, amount));
+    otherDeductionsTotal += amount;
+
+} else if (field.isDeduction()) {
+    otherDeductionsRows.append(String.format(
+        "<tr><td>%s</td><td>Php %.2f</td><td></td><td></td><td></td><td></td><td></td></tr>",
+        label, amount));
+    otherDeductionsTotal += amount;
+
+} else {
+    otherEarningsRows.append(String.format(
+        "<tr><td>%s</td><td>Php %.2f</td><td></td><td></td><td></td><td></td><td></td></tr>",
+        label, amount));
+    otherEarningsTotal += amount;
+}
+
+}
+
     // ✅ Recalculate totals
-    double totalEarnings = basicPay + allowance + execAllow + otPay;
-    double totalDeductions = sss + pagibig + philhealth + absentDeduction + bir;
+    double totalEarnings = basicPay + allowance + execAllow + otPay + bonus + cashAdvance + otherEarningsTotal;
+    double totalDeductions = sss + pagibig + philhealth + absentDeduction + bir + otherDeductionsTotal;
     double netPay = totalEarnings - totalDeductions;
 
-    // ✅ Update the Net Pay cell in the table (optional)
+    // ✅ Update the Net Pay cell in the table
     model.setValueAt(String.format("%.2f", netPay), selectedRow, 16); // Column 16 = NET PAY
 
     // === Company Info ===
     String tin, location;
-   if ("Inspire Next Global Inc.".equalsIgnoreCase(selectedCompany)) {
-    tin = "010-824-345-0000";
-    location = "PSE Tower One Bonifacio High Street 5th Ave. cor. 28th Street BGC, Taguig, Metro Manila";
-} else if ("Inspire Alliance Fund Group Inc.".equalsIgnoreCase(selectedCompany)) {
-    tin = "010-911-458-000";
-    location = "MAIN OFFICE: 6F Alliance Global Tower,\n11th Avenue\ncorner 36th St, Taguig,\nMetro Manila";
-} else if ("Inspire Holdings Incorporated".equalsIgnoreCase(selectedCompany)) {
-    tin = "660-605-053-00000";
-    location = "PSE Tower One Bonifacio High Street 5th Ave. cor. 28th Street BGC, Taguig, Metro Manila";
-} else {
-    tin = "123-456-789-000";
-    location = "123 Main St., Makati City, Philippines";
-}
+    if ("Inspire Next Global Inc.".equalsIgnoreCase(selectedCompany)) {
+        tin = "010-824-345-0000";
+        location = "PSE Tower One Bonifacio High Street 5th Ave. cor. 28th Street BGC, Taguig, Metro Manila";
+    } else if ("Inspire Alliance Fund Group Inc.".equalsIgnoreCase(selectedCompany)) {
+        tin = "010-911-458-000";
+        location = "MAIN OFFICE: 6F Alliance Global Tower,\n11th Avenue\ncorner 36th St, Taguig,\nMetro Manila";
+    } else if ("Inspire Holdings Incorporated".equalsIgnoreCase(selectedCompany)) {
+        tin = "660-605-053-00000";
+        location = "PSE Tower One Bonifacio High Street 5th Ave. cor. 28th Street BGC, Taguig, Metro Manila";
+    } else {
+        tin = "123-456-789-000";
+        location = "123 Main St., Makati City, Philippines";
+    }
 
-String logoUrl;
+    String logoUrl;
+    if ("Inspire Next Global Inc.".equalsIgnoreCase(selectedCompany)) {
+        logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/inspirenextglobal.png");
+    } else if ("Inspire Alliance Fund Group Inc.".equalsIgnoreCase(selectedCompany)) {
+        logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/inspirealliance.png");
+    } else if ("Inspire Holdings Incorporated".equalsIgnoreCase(selectedCompany)) {
+        logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/inpireholding.png");
+    } else {
+        logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/deepocean5.jpg");
+    }
 
-if ("Inspire Next Global Inc.".equalsIgnoreCase(selectedCompany)) {
-    logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/inspirenextglobal.png");
-} else if ("Inspire Alliance Fund Group Inc.".equalsIgnoreCase(selectedCompany)) {
-    logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/inspirealliance.png");
-} else if ("Inspire Holdings Incorporated".equalsIgnoreCase(selectedCompany)) {
-    logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/inpireholding.png");
-} else {
-    logoUrl = encodeImageToBase64("C:/Users/Romel Postrano/Documents/NetBeansProjects/ers/src/images/deepocean5.jpg");
-}
-    // Format HTML
-String singlePayslip = String.format("""
-<div class="company-branding">
-    <img src="%s" alt="Company Logo" class="company-logo">
-    <div class="company-name">%s</div>
-</div>
-
-<div class="company-info">TIN: %s &nbsp; | &nbsp; Location: <span>%s</span></div>
-
-<div class="info-section">
-    <div class="info-grid">
-        <div class="info-row"><span class="label">Employee Name:</span><span class="value">%s</span></div>
-        <div class="info-row"><span class="label">Pay Date:</span><span class="value">%s</span></div>
-        <div class="info-row"><span class="label">Worked Days:</span><span class="value">%d</span></div>
-        <div class="info-row"><span class="label">Employee ID:</span><span class="value">%s</span></div>
-        <div class="info-row"><span class="label">Pay Period:</span><span class="value">%s</span></div>
+    String singlePayslip = String.format("""
+    <div class="company-branding">
+        <img src="%s" alt="Company Logo" class="company-logo">
+        <div class="company-name">%s</div>
     </div>
-</div>
-
-<table>
-  <tr>
-    <td>Basic Pay</td><td>Php %.2f</td>
-    <td>Allowance</td><td>Php %.2f</td>
-    <td>Executive Allowance</td><td>Php %.2f</td>
-    <td>MEMO</td>
-  </tr>
-  <tr>
-    <td>Overtime Pay</td><td>Php %.2f</td>
-    <td>Cash Advance</td><td>Php 0.00</td>
-    <td>Bonus</td><td>Php 0.00</td>
-    <td></td>
-  </tr>
-  <tr><td></td><td>0</td><td></td><td>0</td><td></td><td>0</td><td></td></tr>
-  <tr><td></td><td>0</td><td></td><td>0</td><td></td><td>0</td><td></td></tr>
-  <tr><td colspan="7" style="text-align: right; font-weight: bold;">Total: Php %.2f</td></tr>
-</table>
-
-<table>
-  <tr>
-    <td>SSS</td><td>Php %.2f</td>
-    <td>Pag-IBIG</td><td>Php %.2f</td>
-    <td>PhilHealth</td><td>Php %.2f</td>
-    <td>MEMO</td>
-  </tr>
-  <tr>
-    <td>Absent Day%s</td><td>%d</td>
-    <td>Absent Deduction</td><td>Php %.2f</td>
-    <td>BIR Tax</td><td>Php %.2f</td>
-    <td></td>
-  </tr>
-  <tr><td></td><td>0</td><td></td><td>0</td><td></td><td>0</td><td></td></tr>
-  <tr><td></td><td>0</td><td></td><td>0</td><td></td><td>0</td><td></td></tr>
-  <tr><td colspan="7" style="text-align: right; font-weight: bold;">Total Deductions: Php %.2f</td></tr>
-</table>
-
-<div class="summary-and-signatures">
-    <table class="signature-table">   
+    <div class="company-info">TIN: %s &nbsp; | &nbsp; Location: <span>%s</span></div>
+    <div class="info-section">
+        <div class="info-grid">
+            <div class="info-row"><span class="label">Employee Name:</span><span class="value">%s</span></div>
+            <div class="info-row"><span class="label">Pay Date:</span><span class="value">%s</span></div>
+            <div class="info-row"><span class="label">Worked Days:</span><span class="value">%d</span></div>
+            <div class="info-row"><span class="label">Employee ID:</span><span class="value">%s</span></div>
+            <div class="info-row"><span class="label">Pay Period:</span><span class="value">%s</span></div>
+        </div>
+    </div>
+    <table>
         <tr>
-            <th><div class="sig-line">CEO Signature</div></th>
-            <th><div class="sig-line">President Signature</div></th>
-            <th><div class="sig-line">Accounting Signature</div></th>
+            <td>Basic Pay</td><td>Php %.2f</td>
+            <td>Allowance</td><td>Php %.2f</td>
+            <td>Executive Allowance</td><td>Php %.2f</td>
+            <td>MEMO</td>
         </tr>
-    </table>            
-    <div class="signature-boxes">
-        <div class="sig-box"><div class="sig-line">Employee Signature</div></div>
-    </div>
-    <table class="net-summary">
-        <tr><th>Net Pay</th><th>Php %.2f</th></tr>
+        <tr>
+            <td>Overtime Pay</td><td>Php %.2f</td>
+            <td>Cash Advance</td><td>Php %.2f</td>
+            <td>Bonus</td><td>Php %.2f</td>
+            <td></td>
+        </tr>
+       
+        %s
+        <tr><td colspan="7" style="text-align: right; font-weight: bold;">Total: Php %.2f</td></tr>
     </table>
-</div>
-""",
+
+    <table>
+        <tr>
+            <td>SSS</td><td>Php %.2f</td>
+            <td>Pag-IBIG</td><td>Php %.2f</td>
+            <td>PhilHealth</td><td>Php %.2f</td>
+            <td>MEMO</td>
+        </tr>
+        <tr>
+            <td>Absent Day%s</td><td>%d</td>
+            <td>Absent Deduction</td><td>Php %.2f</td>
+            <td>BIR Tax</td><td>Php %.2f</td>
+            <td></td>
+        </tr>
+       
+        %s
+        <tr><td colspan="7" style="text-align: right; font-weight: bold;">Total Deductions: Php %.2f</td></tr>
+    </table>
+
+    <div class="summary-and-signatures">
+        <table class="signature-table">   
+            <tr>
+                <th><div class="sig-line">CEO Signature</div></th>
+                <th><div class="sig-line">President Signature</div></th>
+                <th><div class="sig-line">Accounting Signature</div></th>
+            </tr>
+        </table>            
+        <div class="signature-boxes">
+            <div class="sig-box"><div class="sig-line">Employee Signature</div></div>
+        </div>
+        <table class="net-summary">
+            <tr><th>Net Pay</th><th>Php %.2f</th></tr>
+        </table>
+    </div>
+    """,
     logoUrl, selectedCompany, tin, location,
     name, payDate, workedDays,
     execId, payPeriod,
     basicPay, allowance, execAllow, otPay,
+    cashAdvance, bonus,
+    otherEarningsRows.toString(),
     totalEarnings,
     sss, pagibig, philhealth,
-    absentDays == 1 ? "" : "s",
-    absentDays,
-    absentDeduction,
-    bir,
+    absentDays == 1 ? "" : "s", absentDays, absentDeduction, bir,
+    otherDeductionsRows.toString(),
     totalDeductions,
     netPay
 );
 
-String html = String.format("""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Payslip</title>
-<style>
-    @page { margin: 2cm 3.18cm; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; color: #222; }
-    .company-branding {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 5px;
-        margin-bottom: 5px;
-    }
-    .company-logo { max-width: 50px; height: auto; }
-    .company-name { font-size: 18px; font-weight: bold; }
-    .company-info { text-align: center; font-size: 8px; color: #555; margin-bottom: 5px; }
-    .info-section { background-color: #f9f9f9; border: 1px solid #ccc; padding: 5px; border-radius: 6px; margin-bottom: 5px; }
-    .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px 5px; font-size: 8px; }
-    .info-row { display: flex; gap: 5px; font-size: 8px; }
-    .label { font-weight: 600; min-width: 100px; color: #333; }
-    .value { color: #444; }
-    table { width: 100%%; border-collapse: collapse; margin-bottom: 5px; font-size: 8px; }
-    th, td { border: 1px solid #999; padding: 5px 5px; text-align: left; font-size: 8px; }
-    th { background-color: #e9e9e9; }
-    .summary-and-signatures { display: flex; justify-content: space-between; margin-top: 5px; gap: 5px; font-size: 5px;}
-    .net-summary { flex: 1; width: 20px;}
-    .signature-boxes { flex: 1;  grid-template-columns: repeat(2, 1fr); gap: 5px; text-align: center; font-size: 10px; }
-    .sig-box { margin-top: 50px; color: black; font-size: 5px; }
-    .sig-line { border-top: 1px solid #000; margin-top: 5px; padding-top: 5px; font-size: 8px; width: 100px;}
-    .signature-table th { padding-top: 45px; text-align: center; border-top: 1px solid #000;}
-    .signature-table { width: 50px; }
-    .net-summary { width: 20px; }
-</style>
-</head>
-<body>
+    String html = String.format("""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+    <meta charset="UTF-8">
+    <title>Payslip</title>
+    <style>
+        @page { margin: 2cm 3.18cm; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; color: #222; }
+        .company-branding {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            margin-bottom: 5px;
+        }
+        .company-logo { max-width: 50px; height: auto; }
+        .company-name { font-size: 18px; font-weight: bold; }
+        .company-info { text-align: center; font-size: 8px; color: #555; margin-bottom: 5px; }
+        .info-section { background-color: #f9f9f9; border: 1px solid #ccc; padding: 5px; border-radius: 6px; margin-bottom: 5px; }
+        .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px 5px; font-size: 8px; }
+        .info-row { display: flex; gap: 5px; font-size: 8px; }
+        .label { font-weight: 600; min-width: 100px; color: #333; }
+        .value { color: #444; }
+        table { width: 100%%; border-collapse: collapse; margin-bottom: 5px; font-size: 8px; }
+        th, td { border: 1px solid #999; padding: 5px 5px; text-align: left; font-size: 8px; }
+        th { background-color: #e9e9e9; }
+        .summary-and-signatures { display: flex; justify-content: space-between; margin-top: 5px; gap: 5px; font-size: 5px;}
+        .net-summary { flex: 1; width: 20px;}
+        .signature-boxes { flex: 1;  grid-template-columns: repeat(2, 1fr); gap: 5px; text-align: center; font-size: 10px; }
+        .sig-box { margin-top: 50px; color: black; font-size: 5px; }
+        .sig-line { border-top: 1px solid #000; margin-top: 5px; padding-top: 5px; font-size: 8px; width: 100px;}
+        .signature-table th { padding-top: 45px; text-align: center; border-top: 1px solid #000;}
+        .signature-table { width: 50px; }
+        .net-summary { width: 20px; }
+    </style>
+    </head>
+    <body>
 
-<div class="payslip">%s</div>
+    <div class="payslip">%s</div>
+    <hr style="margin: 30px 0; border: dashed 1px #ccc;">
+    <div class="payslip">%s</div>
 
-<hr style="margin: 30px 0; border: dashed 1px #ccc;">
-
-<div class="payslip">%s</div>
-
-</body>
-</html>
-""", singlePayslip, singlePayslip);
-
-
+    </body>
+    </html>
+    """, singlePayslip, singlePayslip);
 
     // Convert to PDF
     try {
@@ -649,7 +844,53 @@ String html = String.format("""
         e.printStackTrace();
         JOptionPane.showMessageDialog(this, "Failed to generate payslip: " + e.getMessage());
     }
+    
+     // SAVE TO DB
+    try (Connection cn = DBUtil.getConnection()) {
+        String sql = """
+            INSERT INTO payslip_history (
+                employee_id, employee_name, company_name, pay_date, pay_period,
+                basic_pay, allowance, marketing, executive_allowance,
+                bonus, cash_advance, other_earnings,
+                sss, pagibig, philhealth, bir, absent_days, absent_deduction, other_deductions,
+                gross_pay, total_deductions, net_pay
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """;
+
+        try (PreparedStatement pst = cn.prepareStatement(sql)) {
+            pst.setString(1, execId);
+            pst.setString(2, name);
+            pst.setString(3, selectedCompany);
+            pst.setDate(4, java.sql.Date.valueOf(payDate)); // assuming payDate is in yyyy-MM-dd format
+            pst.setString(5, payPeriod);
+            pst.setDouble(6, basicPay);
+            pst.setDouble(7, allowance);
+            pst.setDouble(8, 0.0); // marketing value (if applicable), replace 0.0 with real value if available
+            pst.setDouble(9, execAllow);
+            pst.setDouble(10, bonus);
+            pst.setDouble(11, cashAdvance);
+            pst.setString(12, otherEarningsRows.toString());
+            pst.setDouble(13, sss);
+            pst.setDouble(14, pagibig);
+            pst.setDouble(15, philhealth);
+            pst.setDouble(16, bir);
+            pst.setInt(17, absentDays);
+            pst.setDouble(18, absentDeduction);
+            pst.setString(19, otherDeductionsRows.toString());
+            pst.setDouble(20, totalEarnings);
+            pst.setDouble(21, totalDeductions);
+            pst.setDouble(22, netPay);
+
+            pst.executeUpdate();
+            System.out.println("Payslip saved to database.");
+        }
+    } catch (SQLException ex) {
+        ex.printStackTrace();
+        JOptionPane.showMessageDialog(null, "Failed to save payslip record: " + ex.getMessage());
+    }
+
 }
+
 
 
  

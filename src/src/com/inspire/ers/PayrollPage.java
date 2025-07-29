@@ -39,6 +39,8 @@ import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.util.Locale;
 import javax.swing.border.TitledBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 
 public class PayrollPage extends JFrame {
@@ -64,7 +66,11 @@ public class PayrollPage extends JFrame {
     private JLabel ratePerMonthLabel = new JLabel();
     private Map<String, Double> salaryCache = new HashMap<>();
     private JLabel absentCountLabel;
-
+private Date startDate;
+private Date endDate;
+private Integer manualBusinessDays;
+private JLabel totalLateLabel;
+private JLabel totalLateDeductionLabel;
 
   
 public PayrollPage(String employeeName, String idNumber) {
@@ -106,21 +112,21 @@ public PayrollPage(String employeeName, String idNumber) {
     filterPanel.setBorder(BorderFactory.createTitledBorder("Filter Records"));
     filterPanel.setBackground(new Color(245, 245, 245));
 
-    String[] months = new java.text.DateFormatSymbols().getMonths();
-    JComboBox<String> monthComboBox = new JComboBox<>();
-    for (int i = 0; i < 12; i++) monthComboBox.addItem(months[i]);
+    JTextField startDateField = new JTextField(10);
+JTextField endDateField = new JTextField(10);
+JButton filterButton = new JButton("Filter");
 
-    int currentYear = Calendar.getInstance().get(Calendar.YEAR);
-    JComboBox<Integer> yearComboBox = new JComboBox<>();
-    for (int i = currentYear - 5; i <= currentYear + 5; i++) yearComboBox.addItem(i);
+filterPanel.add(new JLabel("Cutoff Start Date (yyyy-MM-dd):"));
+filterPanel.add(startDateField);
+filterPanel.add(new JLabel("Cutoff End Date (yyyy-MM-dd):"));
+filterPanel.add(endDateField);
+filterPanel.add(filterButton);
 
-    monthComboBox.setSelectedIndex(Calendar.getInstance().get(Calendar.MONTH));
-    yearComboBox.setSelectedItem(currentYear);
 
-    filterPanel.add(new JLabel("Month:"));
-    filterPanel.add(monthComboBox);
-    filterPanel.add(new JLabel("Year:"));
-    filterPanel.add(yearComboBox);
+JTextField manualBusinessDaysField = new JTextField(5);
+filterPanel.add(new JLabel("Business Days (optional):"));
+filterPanel.add(manualBusinessDaysField);
+
 
     // Buttons (Import/Export)
     JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -208,6 +214,7 @@ public PayrollPage(String employeeName, String idNumber) {
     JButton addButton = new JButton("ADD");
     JButton editButton = new JButton("EDIT");
     JButton removeButton = new JButton("REMOVE");
+    
 
     for (JButton btn : new JButton[]{addButton, editButton, removeButton}) {
         btn.setPreferredSize(btnSize);
@@ -227,6 +234,7 @@ public PayrollPage(String employeeName, String idNumber) {
 
     bottomPanel.add(westButtons, BorderLayout.WEST);
 // === Right Summary Panel (Professional Look) ===
+// === Right Summary Panel (Professional Look) ===
 JPanel summaryPanel = new JPanel(new GridBagLayout());
 summaryPanel.setBorder(BorderFactory.createTitledBorder(
     BorderFactory.createLineBorder(Color.GRAY),
@@ -244,6 +252,17 @@ gbc.anchor = GridBagConstraints.WEST;
 gbc.gridx = 0;
 gbc.gridy = 0;
 
+// Initialize shared labels
+ratePerMinuteLabel = new JLabel("₱0.00");
+ratePerDayLabel = new JLabel("₱0.00");
+ratePerMonthLabel = new JLabel("₱0.00");
+totalLabel = new JLabel("₱0.00");
+absentCountLabel = new JLabel("Total Absents: 0");
+totalLateLabel = new JLabel("0 min");                       // ✅ initialized for class use
+totalLateDeductionLabel = new JLabel("₱0.00");              // ✅ initialized for class use
+overtimeLabel = new JLabel("0 min");
+finalTotalLabel = new JLabel("₱0.00");
+
 // Labels and Value Holders
 JLabel[] labelTitles = {
     new JLabel("Rate per Minute: "),
@@ -251,60 +270,117 @@ JLabel[] labelTitles = {
     new JLabel("Rate per Month: "),
     new JLabel("Total: "),
     new JLabel("Absent Total: "), 
+    new JLabel("Total Late: "),             // 🆕
+    new JLabel("Late Deduction: "),         // 🆕
     new JLabel("Total Overtime: "),
     new JLabel("Final Total: ")
-    
 };
 
 JLabel[] labelValues = {
-    ratePerMinuteLabel = new JLabel("₱0.00"),
-    ratePerDayLabel = new JLabel("₱0.00"),
-    ratePerMonthLabel = new JLabel("₱0.00"),
-    totalLabel = new JLabel("₱0.00"),
-    absentCountLabel = new JLabel("Total Absents: 0"),
-    overtimeLabel = new JLabel("0 min"),
-    finalTotalLabel = new JLabel("₱0.00"),
-   
+    ratePerMinuteLabel,
+    ratePerDayLabel,
+    ratePerMonthLabel,
+    totalLabel,
+    absentCountLabel,
+    totalLateLabel,            // ✅ class-level instance
+    totalLateDeductionLabel,   // ✅ class-level instance
+    overtimeLabel,
+    finalTotalLabel
 };
 
-// Set font styles
+// Set font styles and add to panel
 for (int i = 0; i < labelTitles.length; i++) {
     labelTitles[i].setFont(new Font("Segoe UI", Font.PLAIN, 13));
     labelValues[i].setFont(new Font("Segoe UI", Font.BOLD, 13));
+    
     gbc.gridx = 0;
     gbc.weightx = 0;
     summaryPanel.add(labelTitles[i], gbc);
+    
     gbc.gridx = 1;
     gbc.weightx = 1;
     summaryPanel.add(labelValues[i], gbc);
+    
     gbc.gridy++;
 }
 
-// Add to bottom panel
 bottomPanel.add(summaryPanel, BorderLayout.EAST);
 mainPanel.add(bottomPanel, BorderLayout.SOUTH);
+
 
 
     add(mainPanel);
 
     // Button Actions
     addButton.addActionListener(e -> showAddAttendanceDialog());
-    editButton.addActionListener(e -> showEditDialog());
+    editButton.addActionListener(e -> showEditDialog(startDate, endDate, manualBusinessDays));
     removeButton.addActionListener(e -> removeSelectedRow());
 
     // Filter Events
-    ActionListener filterAction = e -> {
-        int selectedMonthIndex = monthComboBox.getSelectedIndex();
-        int selectedMonth = selectedMonthIndex + 1;
-        int selectedYear = (int) yearComboBox.getSelectedItem();
-        loadDataFromDatabase(selectedMonth, selectedYear);
-    };
+filterButton.addActionListener(e -> {
+    String startDateStr = startDateField.getText().trim();
+    String endDateStr = endDateField.getText().trim();
+    String manualDaysStr = manualBusinessDaysField.getText().trim();
 
-    monthComboBox.addActionListener(filterAction);
-    yearComboBox.addActionListener(filterAction);
+    if (startDateStr.isEmpty() || endDateStr.isEmpty()) {
+        JOptionPane.showMessageDialog(this, "Please enter both cutoff start and end dates.");
+        return;
+    }
+
+    try {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        sdf.setLenient(false);
+
+        startDate = sdf.parse(startDateStr);
+        endDate = sdf.parse(endDateStr);
+
+        manualBusinessDays = null;
+        if (!manualDaysStr.isEmpty()) {
+            try {
+                manualBusinessDays = Integer.parseInt(manualDaysStr);
+            } catch (NumberFormatException nfe) {
+                JOptionPane.showMessageDialog(this, "Please enter a valid number for business days.");
+                return;
+            }
+        }
+
+        if (!endDate.before(startDate)) {
+            loadDataFromDatabase(startDate, endDate, manualBusinessDays);
+        } else {
+            JOptionPane.showMessageDialog(this, "End date must be after start date.");
+        }
+
+    } catch (Exception ex) {
+        ex.printStackTrace();
+        JOptionPane.showMessageDialog(this, "Invalid date or business days input.");
+    }
+});
+
+Timer debounceTimer = new Timer(500, ev -> filterButton.doClick());
+debounceTimer.setRepeats(false);
+
+manualBusinessDaysField.getDocument().addDocumentListener(new DocumentListener() {
+    @Override
+    public void insertUpdate(DocumentEvent e) {
+    
+    }
+
+    @Override
+    public void removeUpdate(DocumentEvent e) {
+    
+    }
+
+    @Override
+    public void changedUpdate(DocumentEvent e) {
+        // Not needed
+    }
+});
+
+
+
 
     // Load initial data
-    loadDataFromDatabase(null, null);
+    loadDataFromDatabase(null, null,null);
 }
 
 
@@ -390,7 +466,7 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
             // Reload table data after import
             tableModel.setRowCount(0);
             totalAmount = 0;
-            loadDataFromDatabase(null, null);
+            loadDataFromDatabase(null, null,null);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -494,7 +570,7 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 }
 
   
-  private void showAddAttendanceDialog() {
+    private void showAddAttendanceDialog() {
     JDialog dialog = new JDialog(this, "Add Attendance", true);
     dialog.setSize(300, 400);
     dialog.setLocationRelativeTo(this);
@@ -637,7 +713,7 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
         double paidAmount = 0;
         String remarks = "";
 
-        double perMinuteRate = getBaseSalaryFromDB(selectedDate);
+        double perMinuteRate = getBaseSalaryFromDB(selectedDate,manualBusinessDays);
         boolean isHalfDay = halfDayCheckBox.isSelected();
 
         if (presentCheckBox.isSelected()) {
@@ -691,20 +767,27 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
 
     
-    public double computePerMinuteRate(double monthlySalary, Date forMonth) {
-    int workingDays = countBusinessDays(forMonth);
+ public double computePerMinuteRate(double monthlySalary, Date forMonth, Integer manualBusinessDays) {
+    int workingDays = countBusinessDays(forMonth, manualBusinessDays);
+
     if (workingDays == 0) return 0.0;
 
     double dailyRate = monthlySalary / workingDays;
-    return dailyRate / 480.0;  // assuming 8 hours/day * 60 minutes
+    return dailyRate / 480.0;  // 8 hours/day * 60 minutes
 }
 
+
+
     
-    public int countBusinessDays(Date selectedDate) {
+ public int countBusinessDays(Date selectedDate, Integer manualOverride) {
+    if (manualOverride != null && manualOverride > 0) {
+        return manualOverride;
+    }
+
     Calendar cal = Calendar.getInstance();
     cal.setTime(selectedDate);
     int year = cal.get(Calendar.YEAR);
-    int month = cal.get(Calendar.MONTH) + 1; // Calendar.MONTH is 0-based
+    int month = cal.get(Calendar.MONTH) + 1;
 
     YearMonth yearMonth = YearMonth.of(year, month);
     int daysInMonth = yearMonth.lengthOfMonth();
@@ -721,10 +804,12 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
     return businessDays;
 }
 
+
+
 // Step 1: Dynamically get business days in selected month
 
 
- private void showEditDialog() {
+private void showEditDialog(Date startDate, Date endDate, Integer manualBusinessDays) {
     int selectedRow = attendanceTable.getSelectedRow();
 
     if (selectedRow == -1) {
@@ -804,7 +889,8 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
             int lateMinutes = calculateLateMinutes(timeIn, startTime);
 
-            double perMinute = getBaseSalaryFromDB(date); // user-defined function
+            double perMinute = getBaseSalaryFromDB(date, manualBusinessDays);
+
             double paidAmount = perMinute * totalMinutesWorked;
 
             boolean isHalfDay = halfDayCheckbox.isSelected();
@@ -821,17 +907,17 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
             tableModel.setValueAt(timeFormat.format(startTime), selectedRow, 2);
             tableModel.setValueAt(timeFormat.format(timeIn), selectedRow, 3);
             tableModel.setValueAt(timeFormat.format(timeOut), selectedRow, 4);
-            tableModel.setValueAt(String.format("%.2f", totalMinutesWorked / 60.0), selectedRow, 5);
+            tableModel.setValueAt(String.format("%02d:%02d:00", totalMinutesWorked / 60, totalMinutesWorked % 60), selectedRow, 5);
             tableModel.setValueAt(String.format("₱%.2f", paidAmount), selectedRow, 6);
             tableModel.setValueAt(remarks, selectedRow, 7);
             tableModel.setValueAt(lateMinutes, selectedRow, 8);
-            tableModel.setValueAt(String.format("₱%.2f", lateMinutes * LATE_PENALTY_PER_MINUTE), selectedRow, 9);
+            tableModel.setValueAt(String.format("₱%.2f", lateMinutes * perMinute), selectedRow, 9);
             tableModel.setValueAt(overtimeMinutes, selectedRow, 10);
             tableModel.setValueAt(totalMinutesWorked, selectedRow, 11);
 
             updatePayrollInDatabase(selectedId, date, startTime, timeIn, timeOut, overtimeMinutes, paidAmount, remarks, isHalfDay);
 
-            loadDataFromDatabase(null, null);
+            loadDataFromDatabase(startDate, endDate, manualBusinessDays);
             dialog.dispose();
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -848,29 +934,54 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
     dialog.setVisible(true);
 }
 
-
-
-    private void removeSelectedRow() {
+  
+ private void removeSelectedRow() {
     int selectedRow = attendanceTable.getSelectedRow();
     if (selectedRow == -1) {
         JOptionPane.showMessageDialog(this, "Please select a row to remove.");
         return;
     }
 
-    int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete this row?", "Confirm Deletion", JOptionPane.YES_NO_OPTION);
-    if (confirm != JOptionPane.YES_OPTION) return;
+    int confirm = JOptionPane.showConfirmDialog(
+        this,
+        "Are you sure you want to delete this row?",
+        "Confirm Deletion",
+        JOptionPane.YES_NO_OPTION
+    );
+
+    if (confirm != JOptionPane.YES_OPTION) {
+        return;
+    }
 
     try {
-        int selectedId = (int) tableModel.getValueAt(selectedRow, 0); // hidden ID
+        // Assumes the first column is a hidden ID used for deletion
+        int selectedId = (int) tableModel.getValueAt(selectedRow, 0);
+
+        // Perform deletion in DB
         deleteFromDatabase(selectedId);
+
+        // Remove from table view
         tableModel.removeRow(selectedRow);
+
         JOptionPane.showMessageDialog(this, "Row deleted successfully.");
-        loadDataFromDatabase(null, null); // refresh table & total
+
+        // Refresh table using existing filters (if any)
+        if (startDate != null && endDate != null) {
+            loadDataFromDatabase(startDate, endDate, manualBusinessDays);
+        } else {
+            loadDataFromDatabase(null, null, null);
+        }
+
+    } catch (ClassCastException cce) {
+        JOptionPane.showMessageDialog(this, "Invalid ID format in table model.");
+        cce.printStackTrace();
     } catch (Exception ex) {
-        ex.printStackTrace();
         JOptionPane.showMessageDialog(this, "Delete Error: " + ex.getMessage());
+        ex.printStackTrace();
     }
 }
+
+
 
     private void deleteFromDatabase(int id) {
     String sql = "DELETE FROM employee_payroll WHERE id = ?";
@@ -947,7 +1058,7 @@ mainPanel.add(bottomPanel, BorderLayout.SOUTH);
  // Declare this at the top of your class (as a field)
 
 
-private double getBaseSalaryFromDB(Date selectedDate) {
+private double getBaseSalaryFromDB(Date selectedDate, Integer manualBusinessDays) {
     // Generate a unique key based on year and month
     Calendar cal = Calendar.getInstance();
     cal.setTime(selectedDate);
@@ -968,7 +1079,9 @@ private double getBaseSalaryFromDB(Date selectedDate) {
         if (rs.next()) {
             double basicPay = rs.getDouble("basic_pay");
 
-            int businessDays = countBusinessDays(selectedDate);
+            // ✅ Fix: Declare businessDays before using
+           int businessDays = countBusinessDays(selectedDate, manualBusinessDays);
+
             if (businessDays == 0) {
                 JOptionPane.showMessageDialog(this, "⚠ No business days found for selected month.");
                 return 0.0;
@@ -995,25 +1108,27 @@ private double getBaseSalaryFromDB(Date selectedDate) {
 }
 
 
+
+
    
-   private int getBusinessDaysInMonth(int month, int year) {
-    Calendar cal = Calendar.getInstance();
-    cal.set(Calendar.YEAR, year);
-    cal.set(Calendar.MONTH, month - 1); // Month is 0-based
-    cal.set(Calendar.DAY_OF_MONTH, 1);
-
-    int businessDays = 0;
-    int maxDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
-
-    for (int day = 1; day <= maxDay; day++) {
-        cal.set(Calendar.DAY_OF_MONTH, day);
-        int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
-        if (dayOfWeek != Calendar.SATURDAY && dayOfWeek != Calendar.SUNDAY) {
-            businessDays++;
-        }
-    }
-    return businessDays;
-}
+//   private int getBusinessDaysInMonth(int month, int year) {
+//    Calendar cal = Calendar.getInstance();
+//    cal.set(Calendar.YEAR, year);
+//    cal.set(Calendar.MONTH, month - 1); // Month is 0-based
+//    cal.set(Calendar.DAY_OF_MONTH, 1);
+//
+//    int businessDays = 0;
+//    int maxDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+//
+//    for (int day = 1; day <= maxDay; day++) {
+//        cal.set(Calendar.DAY_OF_MONTH, day);
+//        int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
+//        if (dayOfWeek != Calendar.SATURDAY && dayOfWeek != Calendar.SUNDAY) {
+//            businessDays++;
+//        }
+//    }
+//    return businessDays;
+//}
 
     
     private double fetchExecAllowance() {
@@ -1218,147 +1333,137 @@ private String getRemarks(Date timeIn, Date timeOut, boolean isHalfDay) {
 }
 
     
-    private void loadDataFromDatabase(Integer filterMonth, Integer filterYear) {
+private void loadDataFromDatabase(Date startDate, Date endDate, Integer manualBusinessDays) {
+    if (startDate == null || endDate == null) {
+        System.out.println("⚠️ Skipping data load: startDate or endDate is null.");
+        return;
+    }
+
+    // Reset previous table and summary values
     tableModel.setRowCount(0);
     totalAmount = 0;
     int totalOvertimeMinutes = 0;
     double totalLateDeduction = 0;
     int absentCount = 0;
+    int totalLateMinutes = 0;
 
     SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
     SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm:ss a");
 
     String sql = "SELECT id, attendance_date, start_time, time_in, time_out, total_minutes, " +
                  "overtime_minutes, remarks, late_minutes " +
-                 "FROM employee_payroll WHERE 1=1 AND employee_name = ?";
-
-    if (filterMonth != null && filterYear != null) {
-        sql += " AND MONTH(attendance_date) = ? AND YEAR(attendance_date) = ?";
-    }
+                 "FROM employee_payroll WHERE employee_name = ? AND attendance_date BETWEEN ? AND ?";
 
     try (Connection conn = DBUtil.getConnection();
          PreparedStatement stmt = conn.prepareStatement(sql)) {
 
         stmt.setString(1, employeeName);
-        if (filterMonth != null && filterYear != null) {
-            stmt.setInt(2, filterMonth);
-            stmt.setInt(3, filterYear);
-        }
-
+        stmt.setDate(2, new java.sql.Date(startDate.getTime()));
+        stmt.setDate(3, new java.sql.Date(endDate.getTime()));
         ResultSet rs = stmt.executeQuery();
 
-       while (rs.next()) {
-    String remarks = rs.getString("remarks");
-    int id = rs.getInt("id");
-    String date = dateFormat.format(rs.getDate("attendance_date"));
-    String startTime = "", timeIn = "", timeOut = "";
-    int totalMinutes = 0, overtime = 0, late = 0;
-    double lateDeduction = 0, regularPayOnly = 0;
+        while (rs.next()) {
+            int id = rs.getInt("id");
+            Date date = rs.getDate("attendance_date");
+            String dateStr = dateFormat.format(date);
+            String remarks = rs.getString("remarks");
+            boolean isAbsent = remarks != null && remarks.equalsIgnoreCase("absent");
 
-    // Check if employee was present
-    boolean isAbsent = remarks != null && remarks.equalsIgnoreCase("absent");
+            String startTime = "", timeIn = "", timeOut = "";
+            int totalMinutes = rs.getInt("total_minutes");
+            int overtime = rs.getInt("overtime_minutes");
+            int late = rs.getInt("late_minutes");
+            double lateDeduction = 0;
+            double regularPay = 0;
 
-    if (!isAbsent) {
-        // Normal computation
-        startTime = timeFormat.format(rs.getTime("start_time"));
-        timeIn = timeFormat.format(rs.getTime("time_in"));
-        timeOut = timeFormat.format(rs.getTime("time_out"));
+            if (!isAbsent) {
+                startTime = timeFormat.format(rs.getTime("start_time"));
+                timeIn = timeFormat.format(rs.getTime("time_in"));
+                timeOut = timeFormat.format(rs.getTime("time_out"));
 
-        totalMinutes = rs.getInt("total_minutes");
-        overtime = rs.getInt("overtime_minutes");
-        late = rs.getInt("late_minutes");
+                double ratePerMinute = getBaseSalaryFromDB(date, manualBusinessDays);
+                lateDeduction = late * ratePerMinute;
+                regularPay = Math.max(0, (480 * ratePerMinute) - lateDeduction);
 
-        double ratePerMinute = getBaseSalaryFromDB(rs.getDate("attendance_date"));
-        lateDeduction = late * ratePerMinute;
-        double regularRatePay = 480 * ratePerMinute;
-        regularPayOnly = regularRatePay - lateDeduction;
-        if (regularPayOnly < 0) regularPayOnly = 0;
-    } else {
-        absentCount++;
-    }
+                totalAmount += regularPay;
+                  totalLateMinutes += late;
+                totalLateDeduction += lateDeduction;
+                totalOvertimeMinutes += overtime;
+            } else {
+                absentCount++;
+            }
 
-    int hours = totalMinutes / 60;
-    int minutes = totalMinutes % 60;
-    String totalHoursFormatted = String.format("%02d:%02d:%02d", hours, minutes, 0);
+            int hours = totalMinutes / 60;
+            int minutes = totalMinutes % 60;
+            String totalHoursFormatted = String.format("%02d:%02d:%02d", hours, minutes, 0);
 
-    tableModel.addRow(new Object[]{
-        id,
-        date,
-        startTime,
-        timeIn,
-        timeOut,
-        totalHoursFormatted,
-        String.format("₱%.2f", regularPayOnly),
-        remarks,
-        late,
-        String.format("₱%.2f", lateDeduction),
-        overtime,
-        totalMinutes
-    });
+            tableModel.addRow(new Object[]{
+                id,
+                dateStr,
+                startTime,
+                timeIn,
+                timeOut,
+                totalHoursFormatted,
+                String.format("₱%.2f", regularPay),
+                remarks,
+                late,
+                String.format("₱%.2f", lateDeduction),
+                overtime,
+                totalMinutes
+            });
+        }
 
-    if (!isAbsent) {
-        totalAmount += regularPayOnly;
-        totalOvertimeMinutes += overtime;
-        totalLateDeduction += lateDeduction;
-    }
-}
-        // Executive Allowance
+        // Additional earnings and deductions
         double execAllowance = fetchExecAllowance();
         totalAmount += execAllowance;
 
-        // Total overtime pay
         double overtimeRatePerMinute = 128.85 / 60.0;
-        double totalOvertimePay = totalOvertimeMinutes * overtimeRatePerMinute;
+        double overtimePay = totalOvertimeMinutes * overtimeRatePerMinute;
+        double finalTotal = totalAmount + overtimePay;
 
-        // Final total = base + overtime - late deductions
-        double finalTotal = totalAmount + totalOvertimePay;
-
+        // Display Summary
         totalLabel.setText("Basic Total: ₱" + String.format("%.2f", totalAmount));
-        overtimeLabel.setText("Total Overtime: " + totalOvertimeMinutes + " minutes (₱" + String.format("%.2f", totalOvertimePay) + ")");
+        overtimeLabel.setText("Total Overtime: " + totalOvertimeMinutes + " minutes (₱" + String.format("%.2f", overtimePay) + ")");
         finalTotalLabel.setText("Final Total: ₱" + String.format("%.2f", finalTotal));
+        absentCountLabel.setText("Total Absents: " + absentCount);
+        
+          // ✅ Update total late and deduction summary labels
+        totalLateLabel.setText(totalLateMinutes + " min");
+        totalLateDeductionLabel.setText("₱" + String.format("%.2f", totalLateDeduction));
 
-        // Salary Rate Calculation
-        Calendar cal = Calendar.getInstance();
-        if (filterMonth != null && filterYear != null) {
-            cal.set(Calendar.YEAR, filterYear);
-            cal.set(Calendar.MONTH, filterMonth - 1);
-            cal.set(Calendar.DAY_OF_MONTH, 1);
-        }
-        Date referenceDate = cal.getTime();
-
-        double refRatePerMinute = getBaseSalaryFromDB(referenceDate);
+        // Rate Calculation
+        Date referenceDate = startDate;
+        double refRatePerMinute = getBaseSalaryFromDB(referenceDate, manualBusinessDays);
         double ratePerDay = refRatePerMinute * 480;
-        double ratePerMonth = ratePerDay * countBusinessDays(referenceDate);
+        double ratePerMonth = ratePerDay * countBusinessDays(referenceDate, manualBusinessDays);
 
         ratePerMinuteLabel.setText("Rate per Minute: ₱" + String.format("%.4f", refRatePerMinute));
         ratePerDayLabel.setText("Rate per Day: ₱" + String.format("%.2f", ratePerDay));
         ratePerMonthLabel.setText("Rate per Month: ₱" + String.format("%.2f", ratePerMonth));
 
-        // Optionally display number of absents
-      absentCountLabel.setText("Total Absents: " + absentCount);
+        // Save payroll summary
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(startDate);
+        int summaryMonth = cal.get(Calendar.MONTH) + 1;
+        int summaryYear = cal.get(Calendar.YEAR);
 
-      if (filterMonth != null && filterYear != null) {
         savePayrollSummaryToDatabase(
-         employeeId,
-         filterMonth,
-         filterYear,
-         refRatePerMinute,
-         ratePerDay,
-         ratePerMonth,
-         totalAmount,
-         totalOvertimeMinutes,
-         finalTotal,
-         absentCount
-     );
-
-}
+            employeeId,
+            summaryMonth,
+            summaryYear,
+            refRatePerMinute,
+            ratePerDay,
+            ratePerMonth,
+            totalAmount,
+            totalOvertimeMinutes,
+            finalTotal,
+            absentCount
+        );
 
     } catch (Exception ex) {
         ex.printStackTrace();
         JOptionPane.showMessageDialog(this, "Load Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
-    
-    
 }
 
 
